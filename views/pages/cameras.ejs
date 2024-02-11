@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+<%- include('../partials/head'); %>
+
+  </head>
+  <body>
+    
+<%- include('../partials/header'); %>
+<main class="container w-100">
+  <h1>Latest Images</h1>
+  <div class="row row-cols-1 row-cols-sm-2 row-cols-md-4 g-3">
+    <% images.forEach(function(image){ %>
+      <div class="col">
+        <div class="card shadow-sm">
+          <a href="/images/<%= camera %>/<%= image %>" data-toggle="lightbox" data-gallery="latest-snapshots">
+            <img class="img-thumbnail" src="/images/<%= camera %>/<%= image %>" />
+          </a>
+          <div class="card-body">
+            <p class="card-text"><%= image %></p>
+          </div>
+        </div>
+      </div>
+    <% }); %>
+
+    
+  </div>
+</main>
+
+
+<%- include('../partials/footer'); %>
+<script src="/js/index.bundle.min.js"></script>      
+  </body>
+</html>

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+<%- include('../partials/head'); %>
+    <script src="/js/websocket.js"></script>
+  </head>
+  <body>
+    
+<%- include('../partials/header'); %>
+<main class="container">
+<div class="row">
+  <h1 id="wait">Generating timelapse, please wait</h1>
+  <div id="video" class="d-none">
+    <div class="embed-responsive embed-responsive-16by9">
+      <video class="embed-responsive-item w-100" id="videoPlayer" controls>
+        <source src="" type="video/mp4" id="videoSource">
+      Your browser does not support the video tag.
+      </video>
+    </div>  
+  </div>  
+</div>
+</main>
+
+<%- include('../partials/footer'); %>
+   <script>
+    var conn = new ReconnectingWebSocket('ws://'+location.host+'/?uu=1');
+    conn.debug = true;
+    conn.timeoutInterval = 5400;
+    conn.onopen = function(e) {
+		  console.log("Websocket connection established!");
+			var data = {
+				event: "start"
+			};
+			conn.send(JSON.stringify(data));
+		};
+
+    conn.onmessage = function(e) {
+			console.log(e.data);
+      var data = JSON.parse(e.data)
+      if(data.action) {
+        if(data.action == "finishedTimelapse") {
+        var filename = data.filename;
+        var videoContainer = document.getElementById('video');
+        var video = document.getElementById('videoPlayer');
+        video.src = "/v/t/"+filename;
+        var waitMessage = document.getElementById('wait');
+        waitMessage.classList.add("d-none");
+        videoContainer.classList.remove("d-none");
+			}  
+      }
+    }
+
+		conn.onclose = function(e) {
+			console.log("Webchat connection closed!");
+		}
+   </script>   
+  </body>
+</html>

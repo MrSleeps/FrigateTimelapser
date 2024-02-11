@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+<%- include('../partials/head'); %>
+    <script src="/js/websocket.js"></script>
+  </head>
+  <body>
+    
+<%- include('../partials/header'); %>
+<main class="container">
+  <div id="loader" class="d-none"><img src="/images/loader.gif" class="img-fluid"><br/><h1>Generating, please wait.</h1></div>
+<div class="row" id="generateForm">
+  <h1 id="wait">Generate a Timelapse</h1>
+  <p>Select your camera from the dropdown below and click generate to create your Timelapse</p>
+  <form>
+    <fieldset>
+      <legend>Choose a camera</legend>
+      <div class="mb-3">
+        <label for="cameraSelect" class="form-label">Disabled select menu</label>
+        <select id="cameraSelect" class="form-select">
+          <% cameras.forEach(function(camera){ %>
+          <option value="<%= camera %>"><%= camera %></option>
+          <% }); %>
+        </select>
+      </div>
+      <button type="button" class="btn btn-primary" id="generateButton">Generate</button>
+    </fieldset>
+  </form>
+</div>
+<div class="row" id="generated">
+  <div class="col">
+    <div id="video" class="d-none">
+      <div class="embed-responsive embed-responsive-16by9 w-100">
+        <video class="embed-responsive-item w-100" id="videoPlayer" controls>
+          <source src="" type="video/mp4" id="videoSource">
+        Your browser does not support the video tag.
+        </video>
+      </div>  
+    </div>
+  </div>
+  <div class="col">
+
+  </div>
+</div>
+</main>
+
+<%- include('../partials/footer'); %>
+   <script>
+$("#generateButton").click(function(){
+  var cameraName = $('#cameraSelect').find(":selected").text();
+  console.log(cameraName)
+  $('#generateForm').addClass("d-none");
+  $('#loader').removeClass("d-none");
+  $.ajax({
+      url : '/'+cameraName+'/timelapse/0/1',
+      type : 'GET',
+      dataType:'json',
+      success : function(data) {              
+          console.log("Generated Timelapse");
+      },
+      error : function(request,error)
+      {
+          alert("Something went wrong.");
+      },
+      timeout: 300000
+  });
+});    
+    var conn = new ReconnectingWebSocket('ws://'+location.host+'/?uu=1');
+    conn.debug = true;
+    conn.timeoutInterval = 5400;
+    conn.onopen = function(e) {
+		  console.log("Websocket connection established!");
+			var data = {
+				event: "start"
+			};
+			conn.send(JSON.stringify(data));
+		};
+
+    conn.onmessage = function(e) {
+			console.log(e.data);
+      var data = JSON.parse(e.data)
+      if(data.action) {
+        if(data.action == "finishedTimelapse") {
+        var filename = data.filename;
+        var video = document.getElementById('videoPlayer');
+        video.src = "/v/t/"+filename;
+        $('#loader').addClass("d-none");
+        $('#video').removeClass("d-none");
+			}  
+      }
+    }
+
+		conn.onclose = function(e) {
+			console.log("Webchat connection closed!");
+		}
+   </script>   
+  </body>
+</html>

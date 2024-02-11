@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+<%- include('../partials/head'); %>
+  </head>
+  <body>
+    
+<%- include('../partials/header'); %>
+<main class="container">
+<div class="row">
+  <h1 id="wait">Generating timelapse, please wait</h1>
+<div id="video">
+  <div class="embed-responsive embed-responsive-16by9 w-100">
+    <video class="embed-responsive-item w-100" id="videoPlayer" controls>
+      <source src="/v/t/<%= camera %>/<%= videoFile %>" type="video/mp4" id="videoSource">
+    Your browser does not support the video tag.
+    </video>
+  </div>  
+</div>  
+</div>
+</main>
+<%- include('../partials/footer'); %> 
+  </body>
+</html>

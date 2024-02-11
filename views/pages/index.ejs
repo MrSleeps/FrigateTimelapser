@@ -1,0 +1,29 @@
+<!-- test updated -->
+<!doctype html>
+<html lang="en">
+  <head>
+<%- include('../partials/head'); %>
+
+  </head>
+  <body>
+    
+<%- include('../partials/header'); %>
+<main class="container">
+  <div class="bg-light p-5 rounded">
+    <h1>Settings</h1>
+    <p class="lead">Here is a list of your current settings, you can change some of these by editing your .env file</p>
+    <p><b>Frigate url:</b> <a href="<%= frigateurl %>" target="_blank"><%= frigateurl %></a></p>
+    <p><b>Cameras:</b></p>
+    <ul>
+      <% cameras.forEach(function(camera){ %>
+      <li><a href="/c/<%= camera %>"><%= camera %></a>
+      <% }); %>
+    </ul>
+  </div>
+</main>
+
+
+<%- include('../partials/footer'); %>
+      
+  </body>
+</html>

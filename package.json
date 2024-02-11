@@ -1,0 +1,31 @@
+{
+  "name": "Frigate Timelapser",
+  "version": "1.0.1",
+  "description": "Generate Timelapse videos from Frigate",
+  "author": "MrSleeps",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "postinstall": "cd public && npm install"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.2",
+    "ejs": "^3.1.9",
+    "express": "^4.18.2",
+    "ffbinaries": "^1.1.4",
+    "find-remove": "^4.1.0",
+    "fluent-ffmpeg": "^2.1.2",
+    "intl-dateformatter": "^1.4.0",
+    "needle": "^3.2.0",
+    "node-cron": "^3.0.3",
+    "requests": "^0.3.0",
+    "socket.io": "^4.7.4",
+    "tough-cookie": "^4.1.3",
+    "underscore": "^1.13.6",
+    "videoshow": "^0.1.12",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "electron": "^22.1.0"
+  }
+}
