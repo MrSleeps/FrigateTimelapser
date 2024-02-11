@@ -1,3 +1,8 @@
+# Frigate Timelapser
+
+This is a node app that helps generate timelapse videos from a Frigate feed.
+
+It's very much a work in progress and has next to no error checking. It does however work, I've been using it for a about a year, sending videos to my telegram via Home Assistant.
 
 ## How to get it running..
 
