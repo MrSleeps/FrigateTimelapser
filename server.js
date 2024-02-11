@@ -67,18 +67,33 @@ app.get('/', (req, res) => {
 app.get('/c/:camera', (req, res) => {
 var camera = req.params.camera;
 var imagePath = imageDirPath+camera;
+var videoPath = videoDirPath+camera;
 const dirents = fs.readdirSync(imagePath, { withFileTypes: true });
 const unSortedImages = dirents
     .filter(dirent => dirent.isFile())
     .map(dirent => dirent.name);
  var images = unSortedImages.slice(Math.max(unSortedImages.length - 10, 0)).reverse();
+
+ const direntsv = fs.readdirSync(videoPath, { withFileTypes: true });
+ const unSortedVideos = direntsv
+    .filter(direntsv => direntsv.isFile())
+    .map(dirent => dirent.name);
+  var filteredVideos = unSortedVideos.filter(function(value) {
+      var ext = path.extname(value);
+      return ['.png'].indexOf(ext) == -1;
+  });    
+ var videos = filteredVideos.slice(Math.max(filteredVideos.length - 10, 0)).reverse();
   res.render('pages/cameras', {
     frigateurl: config.frigateBaseURL,
     cameras: config.cameras,
     images: images,
+    videos: videos,
     camera: camera,
     pagesubtitle: "View camera snapshots"
   });
+  console.log(images)
+  console.log("Videos at:"+videoPath)
+  console.log(filteredVideos)
 });
 
 app.get('/timelapse/generate', (req, res) => {
@@ -98,6 +113,19 @@ app.get('/v/watch/:camera/:filename', (req, res) => {
     camera: camera,
     pagesubtitle: "Watch a timelapse"
   });  
+});
+
+app.get('/v/thumb/:camera/:filename/:pointless', (req, res) => {
+  var file = req.params.filename;
+  var camera = req.params.camera;
+  var fileWithPath = videoDirPath+camera+'/'+file
+  console.log(fileWithPath)
+  if (!fs.existsSync(fileWithPath)) {
+    res.sendFile(__dirname + '/public/images/not-found.jpg')
+  } else {
+    res.sendFile(videoDirPath+camera+'/tn_'+file+'.png');
+  }
+
 });
 
 app.get('/v/t/:camera/:filename', (req, res) => {
@@ -190,6 +218,20 @@ app.get('/:camera/timelapse/:hass/:json', (req, res) => {
           json: true,
           timeout: 10 * 60 * 1000 //10 minutes
         }
+        // create thumbnail
+        // videoFilename
+        var proc = ffmpeg(videoFilename)
+        .on('filenames', function(filenames) {
+          console.log('screenshots are ' + filenames.join(', '));   
+        })
+        .on('end', function() {
+          console.log('screenshots were saved');
+        })
+        .on('error', function(err) {
+          console.log('an error happened: ' + err.message);
+        })
+        // take 1 screenshots at predefined timemarks and size
+        .takeScreenshots({ count: 1, timemarks: [ '00:00:07.000' ], size: '300x169', filename: 'tn_'+videoDate+'.mp4.png' }, dirPathVideoCamera);        
         if(fromHomeAssistant == 1 && config.postToHomeAssistant == 1) {
           jsonString = '{"video": ' + config.timeLapseURL + '/' + req.params['camera'] + '/' + videoDate + '.mp4"}'
           needle.post(config.homeAssistantURL+'/api/webhook/'+config.homeAssistantToken, jsonString, requestOptions)

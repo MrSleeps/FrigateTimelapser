@@ -1,19 +1,28 @@
 # Frigate Timelapser
 
-This is a node app that helps generate timelapse videos from a Frigate feed.
+This is a node app that helps generate timelapse videos from a Frigate feed. It takes a snapshot every few seconds and when called will create a timelapse of the last 15 seconds. 
+
+# Why did I write this? 
+
+Because at the time Frigate didn't have a timelapse function and I find the one that it currently has clunky and unreliable.  I wanted something that I could easily call from Home Assistant and it generate a video when, for example, my front door opens.
 
 It's very much a work in progress and has next to no error checking. It does however work, I've been using it for a about a year, sending videos to my telegram via Home Assistant.
+
 
 ## How to get it running..
 
 You can run it locally via node (and maybe PM2) or via Docker:
+
+You can either build it yourself or grab it from DockerHub.
+
+If you are building it yourself:
 
 ```bash
   git clone https://github.com/MrSleeps/FrigateTimelapser.git
   cd FrigateTimelapser
   ./build
 ```
-Once it's built (hopefully without errors), copy the docker-compose file below and make the relevant changes
+Once it's built (hopefully without errors), or you are grabbing it direct from DockerHub, you need to copy the docker-compose file below and make the relevant changes
 
 
 ```bash
@@ -21,7 +30,7 @@ version: '3.6'
 
 services:
   flame:
-    image: mrsleeps/frigate-timelapser
+    image: mrsleeps/frigate-timelapse
     container_name: frigate-timelapser
     volumes:
       - ${PWD}/files:/app/files
