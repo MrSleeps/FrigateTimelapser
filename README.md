@@ -21,7 +21,7 @@ version: '3.6'
 
 services:
   flame:
-    image: mrsleeps/frigate-timelapse
+    image: mrsleeps/frigate-timelapser
     container_name: frigate-timelapser
     volumes:
       - ${PWD}/files:/app/files

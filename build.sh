@@ -1,2 +1,2 @@
 #!/bin/bash
-docker build -t mrsleeps/frigate-timelapse .
+docker build -t mrsleeps/frigate-timelapser .
