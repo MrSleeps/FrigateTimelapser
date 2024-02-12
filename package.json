@@ -1,6 +1,6 @@
 {
   "name": "Frigate Timelapser",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Generate Timelapse videos from Frigate",
   "author": "MrSleeps",
   "main": "server.js",

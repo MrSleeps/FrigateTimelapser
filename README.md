@@ -2,7 +2,7 @@
 
 This is a node app that helps generate timelapse videos from a Frigate feed. It takes a snapshot every few seconds and when called will create a timelapse of the last 15 seconds. 
 
-# Why did I write this? 
+## Why did I write this? 
 
 Because at the time Frigate didn't have a timelapse function and I find the one that it currently has clunky and unreliable.  I wanted something that I could easily call from Home Assistant and it generate a video when, for example, my front door opens.
 
@@ -30,7 +30,7 @@ version: '3.6'
 
 services:
   flame:
-    image: mrsleeps/frigate-timelapse
+    image: mrsleeps/frigate-timelapser
     container_name: frigate-timelapser
     volumes:
       - ${PWD}/files:/app/files
@@ -91,4 +91,25 @@ docker-compose up -d
 
 If all goes to plan Frigate Timelapser will be up and running and listening at your.host:8500
 
-It's very much written for my needs and as such will have bugs (and zero error checking), suggestions/problems in "Issues" here on Github
+## Generating a timelapse
+
+If you want to generate a timelapse you need to call (via a GET call) the url /:camera/timelapse/:hass/:json with the variables changed. What you set will generate different views.
+
+Start with the variables..
+
+**:camera** is the name of your camera, office for example
+**:hass** is if you are calling it from Home Assistant 
+**:json** if you would like a json reply
+
+The **:hass** option generates the video and then returns via POST to your Home Assistant URL that you set in the timelapse.env file. I use this to then send a copy of the timelapse on to my Telegram account
+The **:json** option decides if you want a json reply with the url of the timelapse or you actually want to view it on the website. **1** returns json and **2** returns a webpage with the video embeded.
+
+So for example, to generate a timelapse manually from a camera called "frontdoor" and watch it via your phone you would visit http://your.host.tld:8500/frontdoor/timelapse/0/0
+
+If you were calling it from Home Assistant and wanted to get a copy of the timelapse sent back to Home Assistant you would visit http://your.host.tld:8500/frontdoor/timelapse/1/0
+
+And finally, if you wanted to return a json which you can use in some other webpage/script/whatever you'd call http://your.host.tld:8500/frontdoor/timelapse/0/1 which would return json like: ```{"action":"finishedTimelapse","filename":"frontdoor/2024-02-12-02-55-06.mp4","camera":"frontdoor"}``` 
+
+Generating the timelapse takes some time, it's not an instant thing. Obviously the fast the host system is the quicker it will be.
+
+It's very much written for my needs and as such will have bugs (and zero error checking), suggestions/problems in "Issues" here on Github.

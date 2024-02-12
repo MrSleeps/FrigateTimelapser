@@ -73,7 +73,6 @@ const unSortedImages = dirents
     .filter(dirent => dirent.isFile())
     .map(dirent => dirent.name);
  var images = unSortedImages.slice(Math.max(unSortedImages.length - 10, 0)).reverse();
-
  const direntsv = fs.readdirSync(videoPath, { withFileTypes: true });
  const unSortedVideos = direntsv
     .filter(direntsv => direntsv.isFile())
@@ -203,7 +202,7 @@ app.get('/:camera/timelapse/:hass/:json', (req, res) => {
         pagesubtitle: "Generating Timelapse"
       });       
     } 
-    var videoDate = dtFormat(new Date, `yyyy-mm{-}dd-hh-mmi-ss`)
+    var videoDate = dtFormat(new Date, `yyyy-mm{-}dd-HH-mmi-ss`)
     var videoFilename = dirPathVideoCamera + videoDate + ".mp4";
     videoshow(filteredFiles, videoOptions)
       .save(videoFilename)
@@ -300,7 +299,8 @@ function grabCameraSnapshots() {
       console.log(config.cameras[1] + " save directory doesn't exist, creating");
       fs.mkdirSync('./files/' + config.imageSaveDir + '/' + config.cameras[i]);
     }
-    var savedFilename = "./files/" + config.imageSaveDir + config.cameras[i] + "/" + Date.now() + ".jpg";
+    var imageDateTime = dtFormat(new Date, `yyyy-mm{-}dd-HH-mmi-ss`)
+    var savedFilename = "./files/" + config.imageSaveDir + config.cameras[i] + "/" + config.cameras[i] + "_" + imageDateTime + ".jpg";
     var saveDirectory = "./files/" + config.imageSaveDir + config.cameras[i] + "/";
     var snapshotURL = config.frigateBaseURL + "/api/" + config.cameras[i] + "/latest.jpg";
     downloadSnapshot(snapshotURL, savedFilename);
