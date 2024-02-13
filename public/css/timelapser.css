@@ -12,9 +12,7 @@ footer {
 }
 
 .green-text {
-    color: #077510;
-    animation: animate  
-        1.5s linear infinite;    
+    color: #077510;  
 }
 
 .red-text {

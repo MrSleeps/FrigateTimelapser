@@ -11,7 +11,10 @@ It's very much a work in progress and has next to no error checking. It does how
 
 ## How to get it running..
 
-You can run it locally via node (and maybe PM2) or via Docker:
+You can run it locally via node (and maybe PM2) or via Docker.
+
+## Running locally.
+
 
 You can either build it yourself or grab it from DockerHub.
 
@@ -29,7 +32,7 @@ Once it's built (hopefully without errors), or you are grabbing it direct from D
 version: '3.6'
 
 services:
-  flame:
+  timelapser:
     image: mrsleeps/frigate-timelapser
     container_name: frigate-timelapser
     volumes:
@@ -51,7 +54,7 @@ Replacing ```${PWD}/files``` with whatever directory you created.
 Next you need to create your .env file. Create a file called timelapse.env and copy and paste the following (modifiy for your own setup):
 
 ```bash
-# The URL of this docker (ex: https://frigate-timelapse.yourhost.tld:port)
+# The URL of this docker (ex: https://frigate-timelapse.yourhost.tld)
 # No / at the end please!
 timelapseURL = "http://your.host"
 timelapsePort = "8500"
@@ -68,6 +71,8 @@ postToHomeAssistant = 1;
 ```
 
 Change ```timelapseURL``` to whatever url you will be using (if behind a proxy use the proxy address).
+
+**If you change ```timelapsePort``` remember to update your docker-compose.yml file!**
 
 Modify ```cameras``` by creating a comma seperated list of your cameras that you want the Timelapser to access, these cannot (currently) have spaces in the names and must match the name that Frigate knows them as.
 
