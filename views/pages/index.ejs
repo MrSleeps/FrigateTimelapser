@@ -9,6 +9,9 @@
     
 <%- include('../partials/header'); %>
 <main class="container">
+  <%if (frigateOnline < 1) { %>
+    <h1 class="text-center red-text"><b>It seems that your Frigate instance is offline, please check!</b></h1>
+  <% } %>    
   <div class="bg-light p-5 rounded">
     <h1>Settings</h1>
     <p class="lead">Here is a list of your current settings, you can change some of these by editing your .env file</p>
@@ -20,6 +23,7 @@
       <% }); %>
     </ul>
   </div>
+
 </main>
 
 

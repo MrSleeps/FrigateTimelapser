@@ -11,6 +11,36 @@ footer {
     background-color: #292d36 !important;
 }
 
+.green-text {
+    color: #077510;
+    animation: animate  
+        1.5s linear infinite;    
+}
+
+.red-text {
+    color: #750707;
+}
+
+.red-text-animate {
+    color: #750707;
+    animation: animate  
+        1.5s linear infinite;
+}
+
+@keyframes animate { 
+    0% { 
+        opacity: 0.2; 
+    } 
+
+    50% { 
+        opacity: 1; 
+    } 
+
+    100% { 
+        opacity: 0.2; 
+    } 
+} 
+
 .navbar-custom {
     background-color: #292d36;
 }

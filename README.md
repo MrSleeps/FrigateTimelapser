@@ -53,7 +53,8 @@ Next you need to create your .env file. Create a file called timelapse.env and c
 ```bash
 # The URL of this docker (ex: https://frigate-timelapse.yourhost.tld:port)
 # No / at the end please!
-timelapseURL = "http://your.host:8500"
+timelapseURL = "http://your.host"
+timelapsePort = "8500"
 # Comma seperated list of your cameras, no spaces please!
 cameras = "camera1,camera2,camera3"
 # The URL of your frigate install

@@ -2,7 +2,7 @@ const dotenv = require('dotenv');
 dotenv.config();
 var config = {};
 const cameras = process.env.cameras.split(",");
-config.listenPort = 8500;
+config.listenPort = process.env.timelapsePort;
 config.cameras = cameras;
 config.frigateBaseURL = process.env.frigateBaseURL;
 config.setLapseSeconds = process.env.setLapseSeconds;

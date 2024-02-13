@@ -1,12 +1,12 @@
 {
   "name": "Frigate Timelapser",
   "description": "Timelapse generator for the Frigate NVR",
-  "version": "1.0.4",
-  "homepage": "https://github.com/MrSleeps/FrigateTimelapser", 
+  "version": "1.0.5",
+  "homepage": "https://github.com/MrSleeps/FrigateTimelapser",
   "author": "MrSleeps",
   "bugs": {
-      "url": "https://github.com/MrSleeps/FrigateTimelapser/issues"
-  },  
+    "url": "https://github.com/MrSleeps/FrigateTimelapser/issues"
+  },
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -22,6 +22,7 @@
     "fluent-ffmpeg": "^2.1.2",
     "needle": "^3.2.0",
     "node-cron": "^3.0.3",
+    "reachable-url": "^1.8.0",
     "requests": "^0.3.0",
     "socket.io": "^4.7.4",
     "tough-cookie": "^4.1.3",
