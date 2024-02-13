@@ -1,0 +1,73 @@
+/* Show it's not fixed to the top */
+body {
+    min-height: 75rem;
+  }
+
+.bg-dark {
+    background-color: #292d36 !important;
+}
+  
+footer {
+    background-color: #292d36 !important;
+}
+
+.navbar-custom {
+    background-color: #292d36;
+}
+  
+.navbar-custom 
+.navbar-brand,
+.navbar-custom 
+.navbar-nav 
+.nav-link {
+    color: #e2e1e1;
+}
+
+.navbar-custom .navbar-brand, .navbar-custom .navbar-nav .nav-link.active {
+    color: #fff;
+}
+
+.navbar-custom .navbar-brand, .navbar-custom .navbar-nav .nav-link:hover {
+    color: #fff;
+}
+
+.navbar-custom .nav-item:hover {
+    color: #fff;
+}
+
+.navbar-custom 
+.navbar-toggler-icon {
+    background-color: #292d36; /* Replace with your desired color for the toggler icon */
+}
+
+.navbar-custom 
+.navbar-toggler {
+border-color: #e2e1e1; /* Replace with your desired border color for the toggler button */
+}
+
+.navbar-custom .dropdown-menu {
+    background-color: #3f4652;
+    color: #e2e1e1;
+}
+
+.navbar-custom 
+.nav-item.dropdown 
+.dropdown-menu 
+a.dropdown-item {
+    color: #e2e1e1;
+}
+
+.navbar-custom 
+.nav-item.dropdown:hover 
+.dropdown-menu {
+    color: #fff;
+    background-color: #3f4652;
+}
+
+.navbar-custom 
+.nav-item.dropdown:hover 
+.dropdown-menu 
+a.dropdown-item:hover {
+    color: #fff; /* Replace with your desired text color on hover */
+    background-color: #3f4652; /* Replace with your desired background color on hover */
+}

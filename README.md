@@ -110,6 +110,6 @@ If you were calling it from Home Assistant and wanted to get a copy of the timel
 
 And finally, if you wanted to return a json which you can use in some other webpage/script/whatever you'd call http://your.host.tld:8500/frontdoor/timelapse/0/1 which would return json like: ```{"action":"finishedTimelapse","filename":"frontdoor/2024-02-12-02-55-06.mp4","camera":"frontdoor"}``` 
 
-Generating the timelapse takes some time, it's not an instant thing. Obviously the fast the host system is the quicker it will be.
+Generating the timelapse takes some time, it's not an instant thing. Obviously the faster the host system is the quicker it will be.
 
 It's very much written for my needs and as such will have bugs (and zero error checking), suggestions/problems in "Issues" here on Github.

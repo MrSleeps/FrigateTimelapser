@@ -13,16 +13,17 @@ const ffbinaries = require("ffbinaries");
 const ffmpeg = require("fluent-ffmpeg");
 const videoshow = require("videoshow");
 const _ = require('underscore');
-const dtFormat = require('intl-dateformatter');
+const dateFormat = require('date-format');
 const needle = require("needle");
-
+const { version } = require('./package.json');
+console.log(version)
 const PORT = config.listenPort;
 const HOST = '0.0.0.0';
-const API_SNAP = '';
-const API_EVENT = '';
 const imageDirPath = __dirname + "/files/" + config.imageSaveDir;
 const videoDirPath = __dirname + "/files/" + config.videoSaveDir;
 const htmlPath = __dirname + '/public'
+const dateTimeFormatString = "yyyy-MM-dd-hh-mm-ss" 
+
 // App
 const wsServer = new ws.Server({ noServer: true });
 wsServer.on('connection', socket => {
@@ -52,7 +53,8 @@ app.use(express.static(htmlPath))
 app.get('/test', (req, res) => {
   res.render('pages/test', {
     wsurl: config.timeLapseURL+'/ws',
-    cameras: config.cameras
+    cameras: config.cameras,
+    version: version
   });
 });
 
@@ -60,7 +62,8 @@ app.get('/', (req, res) => {
   res.render('pages/index', {
     frigateurl: config.frigateBaseURL,
     cameras: config.cameras,
-    pagesubtitle: "Home"
+    pagesubtitle: "Home",
+    version: version
   });
 });
 
@@ -88,7 +91,8 @@ const unSortedImages = dirents
     images: images,
     videos: videos,
     camera: camera,
-    pagesubtitle: "View camera snapshots"
+    pagesubtitle: "View camera snapshots",
+    version: version
   });
   console.log(images)
   console.log("Videos at:"+videoPath)
@@ -99,7 +103,8 @@ app.get('/timelapse/generate', (req, res) => {
     res.render('pages/manualTimelapse', {
       frigateurl: config.frigateBaseURL,
       cameras: config.cameras,
-      pagesubtitle: "Generate a Timelapse"
+      pagesubtitle: "Generate a Timelapse",
+      version: version
     });
   });
 
@@ -110,7 +115,8 @@ app.get('/v/watch/:camera/:filename', (req, res) => {
     cameras: config.cameras,
     videoFile: file,
     camera: camera,
-    pagesubtitle: "Watch a timelapse"
+    pagesubtitle: "Watch a timelapse",
+    version: version
   });  
 });
 
@@ -199,11 +205,12 @@ app.get('/:camera/timelapse/:hass/:json', (req, res) => {
       res.render('pages/generateTimelapse', {
         frigateurl: config.frigateBaseURL,
         cameras: config.cameras,
-        pagesubtitle: "Generating Timelapse"
+        pagesubtitle: "Generating Timelapse",
+        version: version
       });       
     } 
-    var videoDate = dtFormat(new Date, `yyyy-mm{-}dd-HH-mmi-ss`)
-    var videoFilename = dirPathVideoCamera + videoDate + ".mp4";
+    var videoDate = getFormattedDate();
+    var videoFilename = dirPathVideoCamera + req.params['camera']+'_'+videoDate + ".mp4";
     videoshow(filteredFiles, videoOptions)
       .save(videoFilename)
       .on('start', function (command) {
@@ -217,8 +224,6 @@ app.get('/:camera/timelapse/:hass/:json', (req, res) => {
           json: true,
           timeout: 10 * 60 * 1000 //10 minutes
         }
-        // create thumbnail
-        // videoFilename
         var proc = ffmpeg(videoFilename)
         .on('filenames', function(filenames) {
           console.log('screenshots are ' + filenames.join(', '));   
@@ -229,13 +234,12 @@ app.get('/:camera/timelapse/:hass/:json', (req, res) => {
         .on('error', function(err) {
           console.log('an error happened: ' + err.message);
         })
-        // take 1 screenshots at predefined timemarks and size
-        .takeScreenshots({ count: 1, timemarks: [ '00:00:07.000' ], size: '300x169', filename: 'tn_'+videoDate+'.mp4.png' }, dirPathVideoCamera);        
+        .takeScreenshots({ count: 1, timemarks: [ '00:00:07.000' ], size: '300x169', filename: 'tn_'+req.params['camera']+'_'+videoDate+'.mp4.png' }, dirPathVideoCamera);        
         if(fromHomeAssistant == 1 && config.postToHomeAssistant == 1) {
-          jsonString = '{"video": ' + config.timeLapseURL + '/' + req.params['camera'] + '/' + videoDate + '.mp4"}'
+          jsonString = '{"video": ' + config.timeLapseURL + '/' + req.params['camera'] + '/' + req.params['camera']+'_'+videoDate + '.mp4"}'
           needle.post(config.homeAssistantURL+'/api/webhook/'+config.homeAssistantToken, jsonString, requestOptions)
         } else {
-          const socketMessage = {action:"finishedTimelapse", filename:req.params['camera'] + '/' + videoDate + '.mp4',camera:req.params['camera']};
+          const socketMessage = {action:"finishedTimelapse", filename:req.params['camera'] + '/' + req.params['camera']+'_'+videoDate + '.mp4',camera:req.params['camera']};
           if(jsonReply == 1) {
             res.json(socketMessage)
           }
@@ -299,7 +303,7 @@ function grabCameraSnapshots() {
       console.log(config.cameras[1] + " save directory doesn't exist, creating");
       fs.mkdirSync('./files/' + config.imageSaveDir + '/' + config.cameras[i]);
     }
-    var imageDateTime = dtFormat(new Date, `yyyy-mm{-}dd-HH-mmi-ss`)
+    var imageDateTime = getFormattedDate();
     var savedFilename = "./files/" + config.imageSaveDir + config.cameras[i] + "/" + config.cameras[i] + "_" + imageDateTime + ".jpg";
     var saveDirectory = "./files/" + config.imageSaveDir + config.cameras[i] + "/";
     var snapshotURL = config.frigateBaseURL + "/api/" + config.cameras[i] + "/latest.jpg";
@@ -371,6 +375,10 @@ var downloadSnapshot = function (snapshotURL, savedFilename) {
     console.error(error);
   }
 };
+
+var getFormattedDate = function () {
+  return dateFormat.asString(dateTimeFormatString, new Date());
+}
 
 let groupPhotos = function (callback) {
   const aMinuteAgo = new Date(Date.now() - 1000 * 60);
