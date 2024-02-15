@@ -7,41 +7,55 @@
   <body>
     
 <%- include('../partials/header'); %>
-<main class="container">
-  <div id="loader" class="d-none"><img src="/images/loader.gif" class="img-fluid"><br/><h1>Generating, please wait.</h1></div>
-<div class="row" id="generateForm">
-  <h1 id="wait">Generate a Timelapse</h1>
-  <p>Select your camera from the dropdown below and click generate to create your Timelapse</p>
-  <form>
-    <fieldset>
-      <legend>Choose a camera</legend>
-      <div class="mb-3">
-        <label for="cameraSelect" class="form-label">Disabled select menu</label>
-        <select id="cameraSelect" class="form-select">
-          <% cameras.forEach(function(camera){ %>
-          <option value="<%= camera %>"><%= camera %></option>
-          <% }); %>
-        </select>
-      </div>
-      <button type="button" class="btn btn-primary" id="generateButton">Generate</button>
-    </fieldset>
-  </form>
-</div>
-<div class="row" id="generated">
-  <div class="col">
-    <div id="video" class="d-none">
-      <div class="embed-responsive embed-responsive-16by9 w-100">
-        <video class="embed-responsive-item w-100" id="videoPlayer" controls>
-          <source src="" type="video/mp4" id="videoSource">
-        Your browser does not support the video tag.
-        </video>
-      </div>  
-    </div>
-  </div>
-  <div class="col">
+<main class="container d-flex justify-content-center">
 
+  <div class="container py-4">
+    <div class="bg-light p-5 rounded container text-center row">
+      <h1>Generate a Timelapse.</h1>    
+    </div>  
+    <div class="d-none row d-flex justify-content-center" id="loader">
+      <div class="row d-flex justify-content-center">
+        <div class="col-xs-12 col-md-6 d-flex justify-content-center">
+          <!-- <img src="/images/loader.gif" class="img-fluid"> -->
+          <img src="/images/pacman.svg" class="img-fluid">          
+        </div>
+      </div>
+      <div class="row d-flex justify-content-center">
+        <h1 class="text-center">Generating, please wait.</h1>
+      </div>
+    </div>
+    <div class="row d-flex justify-content-center pt-5 d-none" id="generated">
+      <div class="col-md-9 col">
+        <div id="video" class="">
+          <div class="embed-responsive embed-responsive-16by9 w-100">
+            <video class="embed-responsive-item w-100" id="videoPlayer" controls>
+              <source src="" type="video/mp4" id="videoSource">
+            Your browser does not support the video tag.
+            </video>
+          </div>  
+        </div>
+      </div>
+    </div>        
+    <div class="row pt-3" id="generateForm">
+      <p>Select your camera from the dropdown below and click generate to create your Timelapse</p>
+      <form>
+        <fieldset>
+          <legend>Choose a camera</legend>
+          <div class="mb-3">
+            <label for="cameraSelect" class="form-label">Disabled select menu</label>
+            <select id="cameraSelect" class="form-select">
+              <% cameras.forEach(function(camera){ %>
+              <option value="<%= camera %>"><%= camera %></option>
+              <% }); %>
+            </select>
+          </div>
+          <button type="button" class="btn btn-primary" id="generateButton">Generate</button>
+        </fieldset>
+      </form>
+    </div>    
   </div>
-</div>
+
+
 </main>
 
 <%- include('../partials/footer'); %>
@@ -58,9 +72,19 @@ $("#generateButton").click(function(){
       success : function(data) {              
           console.log("Generated Timelapse");
       },
-      error : function(request,error)
+      error : function(response,error)
       {
-          alert("Something went wrong.");
+        var data = JSON.parse(response.responseText)
+        const popup = Notification({
+        position: 'center',
+        duration: 3500
+        });
+        popup.error({
+        title: 'Error',
+        message: data.message
+        });
+        $('#generateForm').removeClass("d-none");
+        $('#loader').addClass("d-none");        
       },
       timeout: 300000
   });
@@ -85,7 +109,7 @@ $("#generateButton").click(function(){
         var video = document.getElementById('videoPlayer');
         video.src = "/v/t/"+filename;
         $('#loader').addClass("d-none");
-        $('#video').removeClass("d-none");
+        $('#generated').removeClass("d-none");
 			}  
       }
     }

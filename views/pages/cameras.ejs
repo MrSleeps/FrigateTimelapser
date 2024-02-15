@@ -4,11 +4,14 @@
 <%- include('../partials/head'); %>
 
   </head>
-  <body>
+  <body class="h-100">
     
 <%- include('../partials/header'); %>
-<main class="container w-100">
-  <h1>Latest Images</h1>
+<main class="container w-100 pb-5">
+  <div class="bg-light p-5 rounded container text-center">
+    <h1><%= camera.charAt(0).toUpperCase() + camera.slice(1) %> camera.</h1>    
+  </div>  
+  <h3> Latest Images</h3>
   <div class="row row-cols-1 row-cols-sm-2 row-cols-md-4 g-3">
     <% images.forEach(function(image){ %>
       <div class="col">
@@ -24,8 +27,8 @@
     <% }); %>
   </div>
 <hr>
-<h1>Latest Videos</h1>
-<div class="row row-cols-1 row-cols-sm-2 row-cols-md-4 g-3">
+<h3>Latest Videos</h3>
+<div class="row row-cols-1 row-cols-sm-2 row-cols-md-4 g-3 pb-5">
   <% videos.forEach(function(video){ %>
     <div class="col">
       <div class="card shadow-sm">
@@ -43,6 +46,6 @@
 
 
 <%- include('../partials/footer'); %>
-<script src="/js/index.bundle.min.js"></script>      
+      
   </body>
 </html>

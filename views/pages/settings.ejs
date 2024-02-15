@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+  <head>
+<%- include('../partials/head'); %>
+<link href="/node_modules/bootstrap5-toggle/css/bootstrap5-toggle.min.css" rel="stylesheet">
+
+  </head>
+  <body>
+    
+<%- include('../partials/header'); %>
+
+<main class="container-fluid">
+  <div class="bg-light p-5 rounded container">
+    <h1>Welcome to Frigate Timelapser.</h1>
+    <p class="lead">Please fill out all the fields to set up your system.</p>    
+  </div>
+<div class="container py-4">
+    <div class="row">
+        <div class="col">
+            <form id="setupForm" needs-validation>
+                <div class="mb-3">
+                <label for="frigateAddressInput" class="form-label">Frigate URL</label>
+                <input type="text" class="form-control" id="frigateAddressInput" name="frigateAddressInput" aria-describedby="frigateURLHelp" placeholder="https://your.frigate.url" required value="<%= frigateURL %>">
+                <div id="frigateURLHelp" class="form-text">Please enter the url of your Frigate nvr.</div>
+                <div class="invalid-feedback" id="frigateURLFeedback">
+                    Please enter a valid host (including the http(s):// part.)
+                  </div>                
+                </div>
+
+                <div class="mb-3">
+                    <label for="frigateCameraInput" class="form-label">Frigate Cameras</label>
+                    <input type="text" class="form-control" id="frigateCameraInput" name="frigateCameraInput" aria-describedby="frigateCameraHelp" placeholder="camera1,camera2,camera3" required value="<%= frigateCameras %>">
+                    <div id="frigateCameraHelp" class="form-text">Please enter the names of your cameras seperated by commas.</div>
+                    <div class="invalid-feedback" id="frigateCameraFeedback">
+                      </div>                
+                </div>
+                <div class="mb-3">
+                    <label for="homeAssistantChoice" class="form-label">Are you going to link this to Home Assistant?</label><br />
+                    <input type="checkbox" id="homeAssistantChoice" data-toggle="toggle" data-onlabel="Yes" data-offlabel="No"<% if(usingHomeAssistant > 0) { %> checked<% } %>>
+                </div>                             
+                <div id="homeAssistantSetup" class="<% if(usingHomeAssistant == 0) { %>d-none<% } %>">
+                    <input type="hidden" name="usingHass" id="usingHass" value="">
+                    <div class="mb-3">
+                        <label for="hassAddressInput" class="form-label">Home Assistant URL</label>
+                        <input type="text" class="form-control" id="hassAddressInput" name="hassAddressInput" aria-describedby="hassURLHelp" placeholder="https://your.homeassistant.url" required value="<%= hassURL %>">
+                        <div id="hassURLHelp" class="form-text">Please enter the url of your Home Assistant.</div>
+                        <div class="invalid-feedback" id="hassURLFeedback">
+                            Please enter a valid host (including the http(s):// part.)
+                          </div>                
+                    </div>
+                    <div class="mb-3">
+                        <label for="hassWebhookInput" class="form-label">Home Assistant Webhook ID</label>
+                        <input type="text" class="form-control" id="hassWebhookInput" name="hassWebhookInput" aria-describedby="hassWebhookHelp" placeholder="" required value="<%= hassWebhook %>">
+                        <div id="hassWebhookHelp" class="form-text">Please enter your Home Assistant Webhook ID.</div>
+                        <div class="invalid-feedback" id="hassWebhookFeedback">
+                            Doesn't look right..
+                          </div>                
+                    </div>                    
+
+                </div>
+                <button type="button" class="btn btn-primary" id="setupConfigBTN">Save</button>
+            </form>        
+        </div>
+    </div>
+</div>
+
+
+</main>
+
+
+<%- include('../partials/footer'); %>
+<script src="/node_modules/bootstrap5-toggle/js/bootstrap5-toggle.ecmas.min.js"></script>
+<script>
+	const isValidUrl = urlString=> {
+	  	var urlPattern = new RegExp('^(https?:\\/\\/)?'+ // validate protocol
+	    '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|'+ // validate domain name
+	    '((\\d{1,3}\\.){3}\\d{1,3}))'+ // validate OR ip (v4) address
+	    '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*'+ // validate port and path
+	    '(\\?[;&a-z\\d%_.~+=-]*)?'+ // validate query string
+	    '(\\#[-a-z\\d_]*)?$','i'); // validate fragment locator
+	  return !!urlPattern.test(urlString);
+	}
+
+    const hasSpaces = function hasWhiteSpace(s) {
+    return s.indexOf(' ') >= 0;
+    }
+
+    $('#homeAssistantChoice').change(function() {
+        if(this.checked) {
+            $('#homeAssistantSetup').removeClass('d-none');
+            $('#usingHass').val('1');
+        } else {
+            $('#homeAssistantSetup').addClass('d-none');
+            $('#usingHass').val('0');
+        } 
+    });     
+     
+    $("#setupConfigBTN").click(function(){
+        var frigateURL = $('#frigateAddressInput').val();
+        var frigateCameras = $('#frigateCameraInput').val();
+        var hassURL = $('#hassAddressInput').val();
+        var hassWebhook = $('#hassWebhookInput').val();     
+        if(isValidUrl(frigateURL) == false) {
+            $('#frigateAddressInput').addClass('is-invalid');
+            $("#frigateAddressInput").focus();
+            return false;
+        } 
+     
+        if(!/(http(s?)):\/\//i.test(frigateURL)) {
+            $('#frigateURLFeedback').text("Please put either http:// or https:// at the start of the url")
+            $('#frigateAddressInput').addClass('is-invalid');
+            $("#frigateAddressInput").focus();
+            return false;
+        }
+        if(hasSpaces(frigateCameras) == true) {
+            $('#frigateCameraFeedback').text("Sorry, you can't have spaces in your camera names.")
+            $('#frigateCameraInput').addClass('is-invalid');
+            $("#frigateCameraInput").focus();
+            return false;
+        }
+        if($('#homeAssistantChoice').prop('checked') == true) {
+            console.log(hassURL)
+            if(isValidUrl(hassURL) == false) {
+                $('#hassAddressInput').addClass('is-invalid');
+                $("#hassAddressInput").focus();
+                return false;
+            }
+            if(hassURL.length < 7) {
+                $('#hassURLFeedback').text("Your URL is too short, are you including the http(s):// ?")
+                $('#hassAddressInput').addClass('is-invalid');
+                $("#hassAddressInput").focus();
+                return false;
+            }            
+            if(hassWebhookInput.length == 0) {
+                console.log("zero length")
+                $('#hassWebhookFeedback').text("You need to provide your Webhook ID.")
+                $('#hassWebhookInput').addClass('is-invalid');
+                $("#hassWebhookInput").focus();
+                return false;
+            }
+            var usingHomeAssistant = 1;
+        } else {
+            var usingHomeAssistant = 0;  
+        }
+        var formData = {
+            frigateURL: frigateURL,
+            frigateCameras: frigateCameras,
+            hassURL: hassURL,
+            hassWebhook: hassWebhook,
+            usingHomeAssistant: usingHomeAssistant,
+            needsSetup: "0" 
+        };
+        $.ajax({
+        url : '/setup',
+        type : 'POST',
+        dataType: "json",
+        encode: true,
+        contentType: "application/json; charset=utf-8",
+        data: JSON.stringify(formData),
+        success : function(data) {
+            var data = JSON.parse(data)
+            const popup = Notification({
+            position: 'center',
+            duration: 3500
+            });
+
+            popup.success({
+            title: 'Success',
+            message: data.message
+            });
+        },
+        error : function(request,error)
+        {
+            alert("Something went wrong.");
+        },
+        timeout: 300000
+    });
+
+    });        
+
+</script>
+  </body>
+</html>

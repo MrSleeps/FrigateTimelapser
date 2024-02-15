@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const ws = require('ws');
 const config = require('./config');
+const jsonConfig = require('./data/config.json');
 const nodeCron = require('node-cron');
 const findRemoveSync = require('find-remove')
 var fs = require('fs');
@@ -18,14 +19,16 @@ const needle = require("needle");
 const reachableUrl = require('reachable-url')
 const { version } = require('./package.json');
 const e = require('express');
-console.log(version)
+const bodyParser = require('body-parser')
+const {readJSON, writeJson} = require('json-reader-writer')
 const PORT = config.listenPort;
 const HOST = '0.0.0.0';
 const imageDirPath = __dirname + "/files/" + config.imageSaveDir;
 const videoDirPath = __dirname + "/files/" + config.videoSaveDir;
 const htmlPath = __dirname + '/public'
 const dateTimeFormatString = "yyyy-MM-dd-hh-mm-ss" 
-
+var jsonParser = bodyParser.json()
+var urlencodedParser = bodyParser.urlencoded({ extended: false })
 // App
 const wsServer = new ws.Server({ noServer: true });
 wsServer.on('connection', socket => {
@@ -35,9 +38,6 @@ wsServer.on('connection', socket => {
     const message = JSON.parse(data);
     if (message && message.action) {
       if(message.action == "finishedTimelapse") {
-        console.log("yee haww");
-        console.log(message.filename)
-        console.log(message.camera)
         const sockmessage = {action:"finishedTimelapse", filename:message.filename,camera:message.camera}
         socket.send(JSON.stringify(sockmessage));
         wsServer.clients.forEach(function each(client) {
@@ -50,23 +50,29 @@ wsServer.on('connection', socket => {
   });
 const app = express();
 app.set('view engine', 'ejs');
+app.use(bodyParser.json())
 app.use(express.static(htmlPath))
+app.use(bodyParser.urlencoded({ extended: false }))
 
-app.get('/test', (req, res) => {
-  res.render('pages/test', {
-    wsurl: config.timeLapseURL+'/ws',
-    cameras: config.cameras,
-    version: version
-  });
+app.get('/healthcheck', (req, res) => {
+  res.json('{"video": "Yes Thanks"}')
 });
 
 app.get('/', (req, res) => {
+  const jsonConfig = JSON.parse(fs.readFileSync('./data/config.json'));
+  const cameras = jsonConfig.frigateCameras.split(",");
+  if(jsonConfig.needsSetup == 1) {
+    res.redirect('/setup');
+    return false;
+  }
   if(isFrigateOnline() == "online") {
     frigateOnline = 1;
+  } else {
+    frigateOnline = 0;
   }
   res.render('pages/index', {
-    frigateurl: config.frigateBaseURL,
-    cameras: config.cameras,
+    frigateurl: jsonConfig.frigateURL,
+    cameras: cameras,
     pagesubtitle: "Home",
     version: version,
     frigateOnline: frigateOnline
@@ -74,48 +80,61 @@ app.get('/', (req, res) => {
 });
 
 app.get('/c/:camera', (req, res) => {
-var camera = req.params.camera;
-var imagePath = imageDirPath+camera;
-var videoPath = videoDirPath+camera;
-const dirents = fs.readdirSync(imagePath, { withFileTypes: true });
-const unSortedImages = dirents
-    .filter(dirent => dirent.isFile())
-    .map(dirent => dirent.name);
- var images = unSortedImages.slice(Math.max(unSortedImages.length - 10, 0)).reverse();
- const direntsv = fs.readdirSync(videoPath, { withFileTypes: true });
- const unSortedVideos = direntsv
-    .filter(direntsv => direntsv.isFile())
-    .map(dirent => dirent.name);
-  var filteredVideos = unSortedVideos.filter(function(value) {
-      var ext = path.extname(value);
-      return ['.png'].indexOf(ext) == -1;
-  });    
- var videos = filteredVideos.slice(Math.max(filteredVideos.length - 10, 0)).reverse();
- if(isFrigateOnline() == "online") {
-  frigateOnline = 1;
-}
-  res.render('pages/cameras', {
-    frigateurl: config.frigateBaseURL,
-    cameras: config.cameras,
-    images: images,
-    videos: videos,
-    camera: camera,
-    pagesubtitle: "View camera snapshots",
-    version: version,
-    frigateOnline: frigateOnline
-  });
-  console.log(images)
-  console.log("Videos at:"+videoPath)
-  console.log(filteredVideos)
+  const jsonConfig = JSON.parse(fs.readFileSync('./data/config.json'));
+  const cameras = jsonConfig.frigateCameras.split(",");
+  if(jsonConfig.needsSetup == 1) {
+    res.redirect('/setup');
+    return false;
+  }
+  var camera = req.params.camera;
+  var imagePath = imageDirPath+camera;
+  var videoPath = videoDirPath+camera;
+  const dirents = fs.readdirSync(imagePath, { withFileTypes: true });
+  const unSortedImages = dirents
+      .filter(dirent => dirent.isFile())
+      .map(dirent => dirent.name);
+  var images = unSortedImages.slice(Math.max(unSortedImages.length - 10, 0)).reverse();
+  const direntsv = fs.readdirSync(videoPath, { withFileTypes: true });
+  const unSortedVideos = direntsv
+      .filter(direntsv => direntsv.isFile())
+      .map(direntsv => direntsv.name);
+    var filteredVideos = unSortedVideos.filter(function(value) {
+        var ext = path.extname(value);
+        return ['.png'].indexOf(ext) == -1;
+    });    
+  var videos = filteredVideos.slice(Math.max(filteredVideos.length - 10, 0)).reverse();
+  if(isFrigateOnline() == "online") {
+    frigateOnline = 1;
+  } else {
+    frigateOnline = 0;
+  }
+    res.render('pages/cameras', {
+      frigateurl: jsonConfig.frigateURL,
+      cameras: cameras,
+      images: images,
+      videos: videos,
+      camera: camera,
+      pagesubtitle: "View camera snapshots",
+      version: version,
+      frigateOnline: frigateOnline
+    });
 });
 
 app.get('/timelapse/generate', (req, res) => {
+  const jsonConfig = JSON.parse(fs.readFileSync('./data/config.json'));
+  const cameras = jsonConfig.frigateCameras.split(",");
+  if(jsonConfig.needsSetup == 1) {
+    res.redirect('/setup');
+    return false;
+  }
   if(isFrigateOnline() == "online") {
     frigateOnline = 1;
+  } else {
+    frigateOnline = 0;
   }  
   res.render('pages/manualTimelapse', {
-    frigateurl: config.frigateBaseURL,
-    cameras: config.cameras,
+    frigateurl: jsonConfig.frigateURL,
+    cameras: cameras,
     pagesubtitle: "Generate a Timelapse",
     version: version,
     frigateOnline: frigateOnline
@@ -123,13 +142,21 @@ app.get('/timelapse/generate', (req, res) => {
 });
 
 app.get('/v/watch/:camera/:filename', (req, res) => {
+  const jsonConfig = JSON.parse(fs.readFileSync('./data/config.json'));
+  const cameras = jsonConfig.frigateCameras.split(",");
+  if(jsonConfig.needsSetup == 1) {
+    res.redirect('/setup');
+    return false;
+  }  
   var file = req.params.filename;
   var camera = req.params.camera;
   if(isFrigateOnline() == "online") {
     frigateOnline = 1;
+  } else {
+    frigateOnline = 0;
   }  
   res.render('pages/viewVideo', {
-    cameras: config.cameras,
+    cameras: cameras,
     videoFile: file,
     camera: camera,
     pagesubtitle: "Watch a timelapse",
@@ -196,10 +223,24 @@ app.get('/images/:camera/:image', function (req, res) {
   } else {
     res.sendFile(theImage);
   }
-  
+});
+
+app.get('/latest/:camera/', function (req, res) {
+  var camera = req.params.camera;
+  var imagePath = imageDirPath+camera;
+  var latest = getMostRecentFile(imagePath);
+  var latestImage = imagePath + '/'+ latest.file;
+  if (!fs.existsSync(latestImage)) {
+    res.set("Content-Type", "image/jpeg");
+    res.sendFile(__dirname + '/public/images/not-found.jpg')
+  } else {
+    res.set("Content-Type", "image/jpeg");
+    res.sendFile(latestImage);
+  }
 });
 
 app.get('/:camera/timelapse/:hass/:json', (req, res) => {
+  const jsonConfig = JSON.parse(fs.readFileSync('./data/config.json'));
   var dirPathCamera = imageDirPath + "" + req.params['camera'] + "/";
   var dirPathVideoCamera = videoDirPath + "" + req.params['camera'] + "/";
   var fromHomeAssistant = req.params['hass'];
@@ -220,12 +261,19 @@ app.get('/:camera/timelapse/:hass/:json', (req, res) => {
       pixelFormat: 'yuv420p'
     }
     if(fromHomeAssistant == 0 && jsonReply == 0) {
+      const cameras = jsonConfig.frigateCameras.split(",");
+      if(jsonConfig.needsSetup == 1) {
+        res.redirect('/setup');
+        return false;
+      }
       if(isFrigateOnline() == "online") {
-        frigateOnline = 1;
+        var frigateOnline = 1;
+      } else {
+        frigateOnline = 0;
       }
       res.render('pages/generateTimelapse', {
-        frigateurl: config.frigateBaseURL,
-        cameras: config.cameras,
+        frigateurl: jsonConfig.frigateURL,
+        cameras: cameras,
         pagesubtitle: "Generating Timelapse",
         version: version,
         frigateOnline: frigateOnline
@@ -236,6 +284,7 @@ app.get('/:camera/timelapse/:hass/:json', (req, res) => {
     videoshow(filteredFiles, videoOptions)
       .save(videoFilename)
       .on('start', function (command) {
+        console.log("Starting Timelapse generation")
       })
       .on('error', function (err, stdout, stderr) {
         console.error('Error:', err)
@@ -257,9 +306,9 @@ app.get('/:camera/timelapse/:hass/:json', (req, res) => {
           console.log('an error happened: ' + err.message);
         })
         .takeScreenshots({ count: 1, timemarks: [ '00:00:07.000' ], size: '300x169', filename: 'tn_'+req.params['camera']+'_'+videoDate+'.mp4.png' }, dirPathVideoCamera);        
-        if(fromHomeAssistant == 1 && config.postToHomeAssistant == 1) {
+        if(fromHomeAssistant == 1 && jsonConfig.usingHomeAssistant == 1) {
           jsonString = '{"video": ' + config.timeLapseURL + '/' + req.params['camera'] + '/' + req.params['camera']+'_'+videoDate + '.mp4"}'
-          needle.post(config.homeAssistantURL+'/api/webhook/'+config.homeAssistantToken, jsonString, requestOptions)
+          needle.post(config.homeAssistantURL+'/api/webhook/'+jsonConfig.homeAssistantToken, jsonString, requestOptions)
         } else {
           const socketMessage = {action:"finishedTimelapse", filename:req.params['camera'] + '/' + req.params['camera']+'_'+videoDate + '.mp4',camera:req.params['camera']};
           if(jsonReply == 1) {
@@ -272,83 +321,158 @@ app.get('/:camera/timelapse/:hass/:json', (req, res) => {
         }
         console.log('Video created in:', output)
       })
+  } else {
+    const errorMessage = {error:"1", message:"No recent snapshots were found, are your cameras or Frigate online?"};
+    res.status(400);
+    res.json(errorMessage)
   }
 });
 
+app.get('/setup', (req, res) => {
+  const jsonConfig = JSON.parse(fs.readFileSync('./data/config.json'));
+  if(jsonConfig.needsSetup == 0) {
+    res.redirect('/settings');
+  } else {
+    res.render('pages/setup', {
+      pagesubtitle: "Setup",
+      version: version,
+    });
+  }
+});
+
+app.post('/setup', urlencodedParser, (req, res) => {
+  const data = req.body;
+  var frigateURL = data.frigateURL;
+  var frigateCameras = data.frigateCameras;
+  var hassURL = data.hassURL;
+  var hassWebhook = data.hassWebhookInput;
+  var usingHomeAssistant = data.usingHomeAssistant;
+  const filePath = __dirname +'/settings.json';
+  const settings = {
+    frigateURL: frigateURL,
+    frigateCameras: frigateCameras,
+    hassURL: hassURL,
+    hassWebhook: hassWebhook,
+    usingHomeAssistant: usingHomeAssistant,
+	  needsSetup: 0
+  }
+  fs.writeFileSync('./data/config.json', JSON.stringify(req.body))
+  var jsonString = '{"message": "Your settings have been saved."}'  
+  res.send(JSON.stringify(jsonString))
+});
+
+app.get('/settings', (req, res) => {
+  const jsonConfig = JSON.parse(fs.readFileSync('./data/config.json'));
+  const cameras = jsonConfig.frigateCameras.split(",");
+  if(jsonConfig.needsSetup == 1) {
+    res.redirect('/setup');
+    return false;
+  }
+  if(isFrigateOnline() == "online") {
+    frigateOnline = 1;
+  }
+  res.render('pages/settings', {
+    frigateurl: jsonConfig.frigateURL,
+    cameras: cameras,
+    pagesubtitle: "Settings",
+    version: version,
+    frigateOnline: frigateOnline,
+	  frigateURL: jsonConfig.frigateURL,
+	  frigateCameras: cameras,
+	  hassURL: jsonConfig.hassURL,
+	  hassWebhook: jsonConfig.hassWebhook,
+	  usingHomeAssistant: jsonConfig.usingHomeAssistant	  
+  });
+});
+
+
 const server = app.listen(PORT, HOST, () => {
+  const jsonConfig = JSON.parse(fs.readFileSync('./data/config.json'));
   if (fs.existsSync(__dirname +'/.online')) {
     fs.unlinkSync(__dirname +'/.online');
   }
-  isOnline(config.frigateBaseURL);  
+  runSetupChecks()
+  if(jsonConfig.needsSetup == 0) {
+    isOnline(jsonConfig.frigateURL); 
+  }
+   
   console.log(`Running on http://${HOST}:${PORT}`);
 });
 
 server.on('upgrade', (request, socket, head) => {
   wsServer.handleUpgrade(request, socket, head, socket => {
     wsServer.emit('connection', socket, request);
-    console.log("Something ws happen")
   });
 });
 
-if (!fs.existsSync('./files/' + config.imageSaveDir)) {
-  console.log("Image save directory doesn't exist, creating");
-  fs.mkdirSync('./files/' + config.imageSaveDir);
-} else {
-  console.log("Image save directory already exists");
-}
-
-if (!fs.existsSync('./files/' + config.videoSaveDir)) {
-  console.log("Video save directory doesn't exist, creating");
-  fs.mkdirSync('./files/' + config.videoSaveDir);
-} else {
-  console.log("Video save directory already exists");
-}
-
-
-var arrayLength = config.cameras.length;
-for (var i = 0; i < arrayLength; i++) {
-  if (!fs.existsSync('./files/' + config.imageSaveDir + '/' + config.cameras[i])) {
-    console.log(config.cameras[i] + " image save directory doesn't exist, creating");
-    fs.mkdirSync('./files/' + config.imageSaveDir + '/' + config.cameras[i]);
+function runSetupChecks() {
+  const jsonConfig = JSON.parse(fs.readFileSync('./data/config.json'));
+  const cameras = jsonConfig.frigateCameras.split(",");
+  if (!fs.existsSync('./files/' + config.imageSaveDir)) {
+    console.log("Image save directory doesn't exist, creating");
+    fs.mkdirSync('./files/' + config.imageSaveDir);
+  } else {
+    console.log("Image save directory already exists");
   }
-  if (!fs.existsSync('./files/' + config.videoSaveDir + '/' + config.cameras[i])) {
-    console.log(config.cameras[i] + " video save directory doesn't exist, creating");
-    fs.mkdirSync('./files/' + config.videoSaveDir + '/' + config.cameras[i]);
+  
+  if (!fs.existsSync('./files/' + config.videoSaveDir)) {
+    console.log("Video save directory doesn't exist, creating");
+    fs.mkdirSync('./files/' + config.videoSaveDir);
+  } else {
+    console.log("Video save directory already exists");
   }
+  
+  var arrayLength = cameras.length;
+  for (var i = 0; i < arrayLength; i++) {
+    if (!fs.existsSync('./files/' + config.imageSaveDir + '/' + cameras[i])) {
+      console.log(cameras[i] + " image save directory doesn't exist, creating");
+      fs.mkdirSync('./files/' + config.imageSaveDir + '/' + cameras[i]);
+    }
+    if (!fs.existsSync('./files/' + config.videoSaveDir + '/' + cameras[i])) {
+      console.log(cameras[i] + " video save directory doesn't exist, creating");
+      fs.mkdirSync('./files/' + config.videoSaveDir + '/' + cameras[i]);
+    }
+  }  
 }
 
 const job = nodeCron.schedule("*/2 * * * * *", function someDudFunction() {
-  console.log("Grabbing latest images.");
   grabCameraSnapshots();
 });
 
 const checkHostJob = nodeCron.schedule("0 * * * * *", function someDudFunction() {
-  console.log("Checking Frigate URL");
-  isOnline(config.frigateBaseURL);
+  const jsonConfig = JSON.parse(fs.readFileSync('./data/config.json'));
+  console.log("Checking Frigate URL: "+jsonConfig.frigateURL+"/api/version");
+  isOnline(jsonConfig.frigateURL+'/api/version');
 });
 
 function grabCameraSnapshots() {
-  if (fs.existsSync(__dirname +'/.online')) {
-    var arrayLength = config.cameras.length;
-    for (var i = 0; i < arrayLength; i++) {
-      if (!fs.existsSync('./files/' + config.imageSaveDir + '/' + config.cameras[i])) {
-        console.log(config.cameras[1] + " save directory doesn't exist, creating");
-        fs.mkdirSync('./files/' + config.imageSaveDir + '/' + config.cameras[i]);
+  const jsonConfig = JSON.parse(fs.readFileSync('./data/config.json'));
+  const cameras = jsonConfig.frigateCameras.split(",");
+  if(jsonConfig.needsSetup == 0) {
+    if (fs.existsSync(__dirname +'/.online')) {
+      var arrayLength = cameras.length;
+      for (var i = 0; i < arrayLength; i++) {
+        if (!fs.existsSync('./files/' + config.imageSaveDir + '/' + cameras[i])) {
+          console.log(cameras[1] + " save directory doesn't exist, creating");
+          fs.mkdirSync('./files/' + config.imageSaveDir + '/' + cameras[i]);
+        }
+        var imageDateTime = getFormattedDate();
+        var savedFilename = "./files/" + config.imageSaveDir + cameras[i] + "/" + cameras[i] + "_" + imageDateTime + ".jpg";
+        var latestFilename = "./files/" + config.imageSaveDir + cameras[i] + "/latest.jpg";
+        var saveDirectory = "./files/" + config.imageSaveDir + cameras[i] + "/";
+        var snapshotURL = jsonConfig.frigateURL + "/api/" + cameras[i] + "/latest.jpg";
+        downloadSnapshot(snapshotURL, savedFilename, latestFilename);
+        var result = findRemoveSync(saveDirectory, {
+          age: { seconds: 5400 },
+          extensions: '.jpg',
+          limit: 100
+        })
       }
-      var imageDateTime = getFormattedDate();
-      var savedFilename = "./files/" + config.imageSaveDir + config.cameras[i] + "/" + config.cameras[i] + "_" + imageDateTime + ".jpg";
-      var saveDirectory = "./files/" + config.imageSaveDir + config.cameras[i] + "/";
-      var snapshotURL = config.frigateBaseURL + "/api/" + config.cameras[i] + "/latest.jpg";
-      downloadSnapshot(snapshotURL, savedFilename);
-      var result = findRemoveSync(saveDirectory, {
-        age: { seconds: 5400 },
-        extensions: '.jpg',
-        limit: 100
-      })
+    } else {
+      console.log("Frigate appears to be offline, not taking snapshot")
     }
-  } else {
-    console.log("Frigate appears to be offline, not taking snapshot")
-  }
+  } 
+
 
 }
 
@@ -384,10 +508,9 @@ function orderByCTime(dirPath, files) {
 }
 
 function filterFiles(theSortedFiles) {
-  sd = subtractSeconds(new Date(), config.setLapseSeconds),
+  var sd = subtractSeconds(new Date(), config.setLapseSeconds),
     ed = new Date(),
     fileNames = []
-  myfruit = {};
   theSortedFiles.forEach(function (file, index) {
     var tempArray = [];
     var time = new Date(file.ctime);
@@ -399,12 +522,12 @@ function filterFiles(theSortedFiles) {
 }
 
 
-var downloadSnapshot = function (snapshotURL, savedFilename) {
+var downloadSnapshot = function (snapshotURL, savedFilename, latestFilename) {
   try {
     needle.get(snapshotURL)
     .pipe(fs.createWriteStream(savedFilename))
     .on('done', function(err) {
-    });
+    });  
   } catch (error) {
     console.log("There was an error:");
     console.error(error);
@@ -419,21 +542,38 @@ async function isOnline (host) {
   needle('get', host)
   .then(function(resp) {
     if(resp.statusCode == 200 || response.statusCode == 201 || response.statusCode == 202 || response.statusCode == 301 || response.statusCode == 302)
-    fs.closeSync(fs.openSync(__dirname +'/.online', 'w'));  
+    fs.closeSync(fs.openSync(__dirname +'/.online', 'w'));
+    console.log("Frigate is up")
   })
   .catch(function(err) {
     console.log(err)
-    fs.unlinkSync(__dirname +'/.online');
+    console.log("Frigate is down")
   });
 }
 
 var isFrigateOnline = function () {
-  if (fs.existsSync(__dirname +'/.online')) {
-    return "online";
-  } else {
-    return "offline";
+  const jsonConfig = JSON.parse(fs.readFileSync('./data/config.json'));
+  if(jsonConfig.needsSetup == 0) {
+    if (fs.existsSync(__dirname +'/.online')) {
+      return "online";
+    } else {
+      return "offline";
+    }
   }
+
 }
+
+const getMostRecentFile = (dir) => {
+  const files = orderReccentFiles(dir);
+  return files.length ? files[0] : undefined;
+};
+
+const orderReccentFiles = (dir) => {
+  return fs.readdirSync(dir)
+    .filter((file) => fs.lstatSync(path.join(dir, file)).isFile())
+    .map((file) => ({ file, mtime: fs.lstatSync(path.join(dir, file)).mtime }))
+    .sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
+};
 
 let groupPhotos = function (callback) {
   const aMinuteAgo = new Date(Date.now() - 1000 * 60);
