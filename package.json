@@ -1,7 +1,7 @@
 {
   "name": "Frigate Timelapser",
   "description": "Timelapse generator for the Frigate NVR",
-  "version": "1.0.6.1",
+  "version": "1.0.7",
   "homepage": "https://github.com/MrSleeps/FrigateTimelapser",
   "author": "MrSleeps",
   "bugs": {
@@ -21,7 +21,6 @@
     "ffbinaries": "^1.1.4",
     "find-remove": "^4.1.0",
     "fluent-ffmpeg": "^2.1.2",
-    "json-reader-writer": "^1.0.4",
     "needle": "^3.2.0",
     "node-cron": "^3.0.3",
     "reachable-url": "^1.8.0",

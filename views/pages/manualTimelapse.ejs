@@ -4,24 +4,20 @@
 <%- include('../partials/head'); %>
     <script src="/js/websocket.js"></script>
   </head>
-  <body>
+  <body class="h-100">
     
 <%- include('../partials/header'); %>
 <main class="container d-flex justify-content-center">
 
   <div class="container py-4">
     <div class="bg-light p-5 rounded container text-center row">
-      <h1>Generate a Timelapse.</h1>    
+      <h1><span id="mainTitle">Generate a Timelapse.</span></h1>
     </div>  
     <div class="d-none row d-flex justify-content-center" id="loader">
       <div class="row d-flex justify-content-center">
         <div class="col-xs-12 col-md-6 d-flex justify-content-center">
-          <!-- <img src="/images/loader.gif" class="img-fluid"> -->
           <img src="/images/pacman.svg" class="img-fluid">          
         </div>
-      </div>
-      <div class="row d-flex justify-content-center">
-        <h1 class="text-center">Generating, please wait.</h1>
       </div>
     </div>
     <div class="row d-flex justify-content-center pt-5 d-none" id="generated">
@@ -45,7 +41,7 @@
             <label for="cameraSelect" class="form-label">Disabled select menu</label>
             <select id="cameraSelect" class="form-select">
               <% cameras.forEach(function(camera){ %>
-              <option value="<%= camera %>"><%= camera %></option>
+              <option value="<%= camera %>"><%= camera.charAt(0).toUpperCase() + camera.slice(1) %></option>
               <% }); %>
             </select>
           </div>
@@ -59,17 +55,31 @@
 </main>
 
 <%- include('../partials/footer'); %>
+<script src="/node_modules/typed.js/dist/typed.umd.js"></script>
    <script>
+   
 $("#generateButton").click(function(){
-  var cameraName = $('#cameraSelect').find(":selected").text();
+  $('#mainTitle').text('');
+  const typed = new Typed("#mainTitle", {
+    strings: ['Generating, please wait...'],
+    typeSpeed: 100,
+    backSpeed: 0,
+    backDelay: 500,
+    startDelay: 1000,
+    smartBackspace: false,
+    loop: true
+  });   
+  var cameraName = $('#cameraSelect').find(":selected").val();
   console.log(cameraName)
   $('#generateForm').addClass("d-none");
   $('#loader').removeClass("d-none");
+  typed.start();
   $.ajax({
       url : '/'+cameraName+'/timelapse/0/1',
       type : 'GET',
       dataType:'json',
-      success : function(data) {              
+      success : function(data) {             
+        typed.destroy(); 
           console.log("Generated Timelapse");
       },
       error : function(response,error)
@@ -83,6 +93,8 @@ $("#generateButton").click(function(){
         title: 'Error',
         message: data.message
         });
+        typed.destroy(); 
+        $('#mainTitle').text("Generate a Timelapse.")
         $('#generateForm').removeClass("d-none");
         $('#loader').addClass("d-none");        
       },
@@ -108,6 +120,7 @@ $("#generateButton").click(function(){
         var filename = data.filename;
         var video = document.getElementById('videoPlayer');
         video.src = "/v/t/"+filename;
+        $('#mainTitle').text("Your Timelapse.")
         $('#loader').addClass("d-none");
         $('#generated').removeClass("d-none");
 			}  

@@ -115,6 +115,28 @@ If  you are using the Home Assistant post back doobrie you will need to fill out
 
 Click save and off you go!
 
+If you don't trust a web interface to set it up and prefer to do it the old school way by editing a text file you can also do that. Fire up your trusty text editor, copy and paste in the following and edit it to suit your needs.
+
+```
+{
+    "needsSetup": 0,
+    "frigateURL": "https://your.frigate.host",
+    "frigateCameras": "camera1,camera2,camera3",
+    "hassURL": "https://your.hass.host",
+    "hassWebhook": "",
+    "usingHomeAssistant": 0,
+    "timeLapseSeconds": 16,
+    "keepImagesMinutes":60,
+    "keepVideosDays":1
+}
+```
+
+Edit docker-compose.yml and add the following line to the **volumes** section:
+
+```
+      - /path/to/the/config.json:/app/data/config.json
+```
+
 ## Generating a timelapse
 
 If you want to generate a timelapse you need to call (via a GET call) the url **/:camera/timelapse/:hass/:json** with the variables changed. What you set will generate different views.
@@ -136,4 +158,4 @@ And finally, if you wanted to return a json which you can use in some other webp
 
 Generating the timelapse takes some time, it's not an instant thing. Obviously the faster the host system is the quicker it will be.
 
-It's very much written for my needs and as such will have bugs (and zero error checking), suggestions/problems in "Issues" here on Github.
+It's very much written for my needs and as such will have bugs (and very little error checking), suggestions/problems in "Issues" here on Github.

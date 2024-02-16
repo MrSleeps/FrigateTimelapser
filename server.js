@@ -4,7 +4,7 @@ const ws = require('ws');
 const config = require('./config');
 const jsonConfig = require('./data/config.json');
 const nodeCron = require('node-cron');
-const findRemoveSync = require('find-remove')
+const findRemoveSync = require('find-remove');
 var fs = require('fs');
 const path = require("path");
 const shell = require("electron").shell;
@@ -20,7 +20,6 @@ const reachableUrl = require('reachable-url')
 const { version } = require('./package.json');
 const e = require('express');
 const bodyParser = require('body-parser')
-const {readJSON, writeJson} = require('json-reader-writer')
 const PORT = config.listenPort;
 const HOST = '0.0.0.0';
 const imageDirPath = __dirname + "/files/" + config.imageSaveDir;
@@ -347,13 +346,16 @@ app.post('/setup', urlencodedParser, (req, res) => {
   var hassURL = data.hassURL;
   var hassWebhook = data.hassWebhookInput;
   var usingHomeAssistant = data.usingHomeAssistant;
-  const filePath = __dirname +'/settings.json';
+  var timeLapseSeconds = data.timeLapseSeconds;
+  var keepImagesDays = data.keepImagesDays;
   const settings = {
     frigateURL: frigateURL,
     frigateCameras: frigateCameras,
     hassURL: hassURL,
     hassWebhook: hassWebhook,
     usingHomeAssistant: usingHomeAssistant,
+    timeLapseSeconds: timeLapseSeconds,
+    keepImagesDays: keepImagesDays,
 	  needsSetup: 0
   }
   fs.writeFileSync('./data/config.json', JSON.stringify(req.body))
@@ -381,7 +383,10 @@ app.get('/settings', (req, res) => {
 	  frigateCameras: cameras,
 	  hassURL: jsonConfig.hassURL,
 	  hassWebhook: jsonConfig.hassWebhook,
-	  usingHomeAssistant: jsonConfig.usingHomeAssistant	  
+	  usingHomeAssistant: jsonConfig.usingHomeAssistant,
+    timeLapseSeconds: jsonConfig.timeLapseSeconds,
+    keepImagesDays: jsonConfig.keepImagesDays,
+    keepVideosDays: jsonConfig.keepVideosDays,    
   });
 });
 
@@ -439,6 +444,10 @@ const job = nodeCron.schedule("*/2 * * * * *", function someDudFunction() {
   grabCameraSnapshots();
 });
 
+const clearOldFiles = nodeCron.schedule("0 26 */1 * * *", function someDudFunction() {
+  removeOldFiles();
+});
+
 const checkHostJob = nodeCron.schedule("0 * * * * *", function someDudFunction() {
   const jsonConfig = JSON.parse(fs.readFileSync('./data/config.json'));
   console.log("Checking Frigate URL: "+jsonConfig.frigateURL+"/api/version");
@@ -458,10 +467,9 @@ function grabCameraSnapshots() {
         }
         var imageDateTime = getFormattedDate();
         var savedFilename = "./files/" + config.imageSaveDir + cameras[i] + "/" + cameras[i] + "_" + imageDateTime + ".jpg";
-        var latestFilename = "./files/" + config.imageSaveDir + cameras[i] + "/latest.jpg";
         var saveDirectory = "./files/" + config.imageSaveDir + cameras[i] + "/";
         var snapshotURL = jsonConfig.frigateURL + "/api/" + cameras[i] + "/latest.jpg";
-        downloadSnapshot(snapshotURL, savedFilename, latestFilename);
+        downloadSnapshot(snapshotURL, savedFilename);
         var result = findRemoveSync(saveDirectory, {
           age: { seconds: 5400 },
           extensions: '.jpg',
@@ -472,8 +480,6 @@ function grabCameraSnapshots() {
       console.log("Frigate appears to be offline, not taking snapshot")
     }
   } 
-
-
 }
 
 async function listFiles(directory) {
@@ -508,7 +514,8 @@ function orderByCTime(dirPath, files) {
 }
 
 function filterFiles(theSortedFiles) {
-  var sd = subtractSeconds(new Date(), config.setLapseSeconds),
+  const jsonConfig = JSON.parse(fs.readFileSync('./data/config.json'));
+  var sd = subtractSeconds(new Date(), jsonConfig.timeLapseSeconds * 2),
     ed = new Date(),
     fileNames = []
   theSortedFiles.forEach(function (file, index) {
@@ -521,8 +528,7 @@ function filterFiles(theSortedFiles) {
   return fileNames;
 }
 
-
-var downloadSnapshot = function (snapshotURL, savedFilename, latestFilename) {
+var downloadSnapshot = function (snapshotURL, savedFilename) {
   try {
     needle.get(snapshotURL)
     .pipe(fs.createWriteStream(savedFilename))
@@ -560,7 +566,6 @@ var isFrigateOnline = function () {
       return "offline";
     }
   }
-
 }
 
 const getMostRecentFile = (dir) => {
@@ -575,18 +580,24 @@ const orderReccentFiles = (dir) => {
     .sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
 };
 
-let groupPhotos = function (callback) {
-  const aMinuteAgo = new Date(Date.now() - 1000 * 60);
-  videoFiles = [];
-
-  fs.readdir(config.timeLapseDir, (err, files) => {
-    files.forEach(file => {
-      if (path.extname(file) === "." + "png") {
-        videoFiles.push(config.timeLapseDir + "/" + file);
-      }
-    });
-    if (callback) {
-      callback();
-    }
-  });
-};
+async function removeOldFiles() {
+  const jsonConfig = JSON.parse(fs.readFileSync('./data/config.json'));
+  const cameras = jsonConfig.frigateCameras.split(",");
+  var arrayLength = cameras.length;
+  for (var i = 0; i < arrayLength; i++) {
+    numberOfSecondsImages = jsonConfig.keepImagesDays * 86400;
+    numberOfSecondsVideos = jsonConfig.keepVideosDays * 86400;
+    console.log(numberOfSecondsImages);
+    var imageResult = findRemoveSync('./files/'+config.imageSaveDir+cameras[i], {
+      age: { seconds: numberOfSecondsImages },
+      extensions: '.jpg'
+    })        
+    var numberOfDeletedImageFiles = imageResult.length;
+    var videoResult = findRemoveSync('./files/'+config.imageSaveDir+cameras[i], {
+      age: { seconds: numberOfSecondsVideos },
+      extensions: ['.png', '.mp4']
+    })        
+    var numberOfDeletedVideoFiles = videoResult.length;
+    console.log("Purging old videos and images")    
+  }
+}

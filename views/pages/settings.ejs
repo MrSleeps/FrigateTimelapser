@@ -5,11 +5,11 @@
 <link href="/node_modules/bootstrap5-toggle/css/bootstrap5-toggle.min.css" rel="stylesheet">
 
   </head>
-  <body>
+  <body class="h-100">
     
 <%- include('../partials/header'); %>
 
-<main class="container-fluid">
+<main class="container-fluid h-100 pb-5">
   <div class="bg-light p-5 rounded container">
     <h1>Welcome to Frigate Timelapser.</h1>
     <p class="lead">Please fill out all the fields to set up your system.</p>    
@@ -26,14 +26,23 @@
                     Please enter a valid host (including the http(s):// part.)
                   </div>                
                 </div>
-
                 <div class="mb-3">
                     <label for="frigateCameraInput" class="form-label">Frigate Cameras</label>
                     <input type="text" class="form-control" id="frigateCameraInput" name="frigateCameraInput" aria-describedby="frigateCameraHelp" placeholder="camera1,camera2,camera3" required value="<%= frigateCameras %>">
-                    <div id="frigateCameraHelp" class="form-text">Please enter the names of your cameras seperated by commas.</div>
+                    <div id="frigateCameraHelp" class="form-text">Please enter the names of your cameras seperated by commas. Make sure these match the names you have in Frigate.</div>
                     <div class="invalid-feedback" id="frigateCameraFeedback">
                       </div>                
                 </div>
+                <div class="mb-3">
+                    <label for="timeLapseLength" class="form-label">Timelapse length (seconds)</label>
+                    <div class="range-slider mt-0">
+                        <input type="range" class="form-range range-slider__range" min="10" max="1800" step="2" id="timeLapseLength" value="<%= timeLapseSeconds %>" name="timeLapseLength">
+                        <span class="range-slider__value">0</span>
+                      </div>                    
+                    <div id="timeLapseLengthHelp" class="form-text">How long do you want your Timelapse video to be? (Max of 30 minutes)<br /><b>The longer you set this, the longer the Timelapse video will take to create.</b></div>
+                    <div class="invalid-feedback" id="timeLapseLengthHelp">
+                      </div>                
+                </div>                
                 <div class="mb-3">
                     <label for="homeAssistantChoice" class="form-label">Are you going to link this to Home Assistant?</label><br />
                     <input type="checkbox" id="homeAssistantChoice" data-toggle="toggle" data-onlabel="Yes" data-offlabel="No"<% if(usingHomeAssistant > 0) { %> checked<% } %>>
@@ -56,7 +65,28 @@
                             Doesn't look right..
                           </div>                
                     </div>                    
-
+                    <hr /> 
+                <p>How many days do you want to keep...</p>
+                <div class="mb-3">
+                    <label for="keepImagesDays" class="form-label">Images (days)</label>
+                    <div class="range-slider mt-0">
+                        <input type="range" class="form-range range-slider__range" min="0.25" max="365" step="0.25" id="keepImagesDays" value="<%= keepImagesDays %>" name="keepImagesDays">
+                        <span class="range-slider__value">0</span>
+                      </div>                    
+                    <div id="keepImagesDaysHelp" class="form-text">Images older than this amount of days will be automatically deleted.</div>
+                    <div class="invalid-feedback" id="keepImagesDaysHelp">
+                      </div>                
+                </div>
+                <div class="mb-3">
+                    <label for="keepVideosDays" class="form-label">Videos (days)</label>
+                    <div class="range-slider mt-0">
+                        <input type="range" class="form-range range-slider__range" min="0.25" max="365" step="0.25" id="keepVideosDays" value="<%= keepVideosDays %>" name="keepVideosDays">
+                        <span class="range-slider__value">0</span>
+                      </div>                    
+                    <div id="keepVideosDaysHelp" class="form-text">Videos older than this amount of days will be automatically deleted.</div>
+                    <div class="invalid-feedback" id="keepVideosDaysHelp">
+                      </div>                
+                </div>             
                 </div>
                 <button type="button" class="btn btn-primary" id="setupConfigBTN">Save</button>
             </form>        
@@ -99,7 +129,10 @@
         var frigateURL = $('#frigateAddressInput').val();
         var frigateCameras = $('#frigateCameraInput').val();
         var hassURL = $('#hassAddressInput').val();
-        var hassWebhook = $('#hassWebhookInput').val();     
+        var hassWebhook = $('#hassWebhookInput').val();
+        var timeLapseLength = $('#timeLapseLength').val();
+        var keepImagesDays = $('#keepImagesDays').val();
+        var keepVideosDays = $('#keepVideosDays').val();
         if(isValidUrl(frigateURL) == false) {
             $('#frigateAddressInput').addClass('is-invalid');
             $("#frigateAddressInput").focus();
@@ -148,6 +181,9 @@
             hassURL: hassURL,
             hassWebhook: hassWebhook,
             usingHomeAssistant: usingHomeAssistant,
+            timeLapseSeconds: timeLapseLength,
+            keepImagesDays: keepImagesDays,
+            keepVideosDays: keepVideosDays,
             needsSetup: "0" 
         };
         $.ajax({
@@ -171,13 +207,38 @@
         },
         error : function(request,error)
         {
-            alert("Something went wrong.");
+            const popup = Notification({
+            position: 'center',
+            duration: 3500
+            });
+
+            popup.error({
+            title: 'Error!',
+            message: 'Something went wrong..'
+            });
         },
         timeout: 300000
     });
 
     });        
+var rangeSlider = function(){
+  var slider = $('.range-slider'),
+      range = $('.range-slider__range'),
+      value = $('.range-slider__value');
+    
+  slider.each(function(){
 
+    value.each(function(){
+      var value = $(this).prev().attr('value');
+      $(this).html(value);
+    });
+
+    range.on('input', function(){
+      $(this).next(value).html(this.value);
+    });
+  });
+};
+rangeSlider();  
 </script>
   </body>
 </html>
