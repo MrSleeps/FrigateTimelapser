@@ -1,6 +1,6 @@
-## Frigate Timelapser
+# Frigate Timelapser
 
-This is a node app that helps generate timelapse videos from a Frigate feed. It takes a snapshot every few seconds and when called will create a timelapse of the last 15 seconds.
+This is a node app that helps generate timelapse videos from a Frigate feed. It takes a snapshot every few seconds and when called will create a timelapse of the last 15 seconds (the length of the timelapse is configurable).
 
 ## Why did I write this?
 
@@ -126,7 +126,7 @@ If you don't trust a web interface to set it up and prefer to do it the old scho
     "hassWebhook": "",
     "usingHomeAssistant": 0,
     "timeLapseSeconds": 16,
-    "keepImagesMinutes":60,
+    "keepImagesDays":1,
     "keepVideosDays":1
 }
 ```
@@ -157,5 +157,7 @@ If you were calling it from Home Assistant and wanted to get a copy of the timel
 And finally, if you wanted to return a json which you can use in some other webpage/script/whatever you'd call http://your.host.tld:8500/frontdoor/timelapse/0/1 which would return json like: `{"action":"finishedTimelapse","filename":"frontdoor/2024-02-12-02-55-06.mp4","camera":"frontdoor"}`
 
 Generating the timelapse takes some time, it's not an instant thing. Obviously the faster the host system is the quicker it will be.
+
+To get an example of how to get this working with Home Assistant, read HomeAssistant.md
 
 It's very much written for my needs and as such will have bugs (and very little error checking), suggestions/problems in "Issues" here on Github.
