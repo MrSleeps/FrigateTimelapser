@@ -18,7 +18,6 @@ const dateFormat = require('date-format');
 const needle = require("needle");
 const reachableUrl = require('reachable-url')
 const { version } = require('./package.json');
-const e = require('express');
 const bodyParser = require('body-parser')
 const PORT = config.listenPort;
 const HOST = '0.0.0.0';
@@ -339,6 +338,29 @@ app.get('/setup', (req, res) => {
   }
 });
 
+app.post('/api/check/frigate', urlencodedParser, (req, res) => {
+  const data = req.body;
+  var frigateURL = data.frigateURL;
+  needle('get', frigateURL+'/api/config')
+  .then(function(resp) {
+    if(resp.statusCode == 200 || response.statusCode == 201 || response.statusCode == 202 || response.statusCode == 301 || response.statusCode == 302)
+    var cameras = []
+    _.each(resp.body.cameras, function (value, key) {
+      console.log(value.name)
+      cameras.push({
+        camera: value.name
+      });
+      
+    });
+  res.send(JSON.stringify(cameras))
+  })
+  .catch(function(err) {
+    res.status(400).send({
+      message: 'Unable to connect to Frigate host.'
+   });
+  });  
+});
+
 app.post('/setup', urlencodedParser, (req, res) => {
   const data = req.body;
   var frigateURL = data.frigateURL;
@@ -359,7 +381,8 @@ app.post('/setup', urlencodedParser, (req, res) => {
 	  needsSetup: 0
   }
   fs.writeFileSync('./data/config.json', JSON.stringify(req.body))
-  var jsonString = '{"message": "Your settings have been saved."}'  
+  var jsonString = '{"message": "Your settings have been saved."}'
+  runSetupChecks()
   res.send(JSON.stringify(jsonString))
 });
 

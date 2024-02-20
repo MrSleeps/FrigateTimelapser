@@ -17,6 +17,7 @@
     <div class="row">
         <div class="col">
             <form id="setupForm" needs-validation>
+                <input id="hiddenFrigateURL" type="hidden">
                 <div class="mb-3">
                 <label for="frigateAddressInput" class="form-label">Frigate URL</label>
                 <input type="text" class="form-control" id="frigateAddressInput" name="frigateAddressInput" aria-describedby="frigateURLHelp" placeholder="https://your.frigate.url" required value="">
@@ -25,6 +26,7 @@
                         Please enter a valid host (including the http(s):// part.)
                     </div>                
                 </div>
+                <button type="button" class="btn btn-primary mb-4" id="testFrigateHostBTN">Check host</button>
                 <div class="mb-3">
                     <label for="frigateCameraInput" class="form-label">Frigate Cameras</label>
                     <input type="text" class="form-control" id="frigateCameraInput" name="frigateCameraInput" aria-describedby="frigateCameraHelp" placeholder="camera1,camera2,camera3" required value="">
@@ -122,7 +124,67 @@
             $('#homeAssistantSetup').addClass('d-none');
             $('#usingHass').val('0');
         } 
-    });     
+    });
+
+    $("#frigateAddressInput").on("keyup", function () {
+        var frigateHidden=$("#hiddenFrigateURL").val();
+        var frigateURL=$("#frigateAddressInput").val();
+        if (frigateHidden == frigateURL) {
+            $('#testFrigateHostBTN').prop('disabled', true);
+        } else {
+            $('#testFrigateHostBTN').prop('disabled', false);
+        }
+    })
+ 
+    
+    $("#testFrigateHostBTN").click(function(){
+        var frigateURL = $('#frigateAddressInput').val();
+        const popup = Notification({
+            position: 'center',
+            duration: 3500
+            });
+        if(frigateURL.length < 7) {
+            popup.error({
+            title: 'Error!',
+            message: 'Your Frigate URL is too short.'
+            });
+            return false
+        }
+        var formData = {
+            frigateURL: frigateURL
+        };     
+        $.ajax({
+            url : '/api/check/frigate',
+            type : 'POST',
+            dataType: "json",
+            encode: true,
+            contentType: "application/json; charset=utf-8",
+            data: JSON.stringify(formData),
+            success : function(data) {    
+                var result = data.map(function(val) {
+                return val.camera;
+                }).join(',');
+                $('#frigateCameraInput').val(result);
+                popup.success({
+                    title: 'Success',
+                    message: 'Connected to your Frigate and found your cameras'
+                });  
+                $('#frigateCameraInput').focus();
+                $('#hiddenFrigateURL').val(result);
+                $('#testFrigateHostBTN').prop('disabled', true);
+            },
+            error : function(request,error)
+            {
+            popup.error({
+                title: 'Error!',
+                message: request.responseJSON.message
+            });
+            return false
+            },
+            timeout: 300000
+        });
+
+    });    
      
     $("#setupConfigBTN").click(function(){
         var frigateURL = $('#frigateAddressInput').val();
