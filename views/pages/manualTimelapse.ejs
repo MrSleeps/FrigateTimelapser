@@ -57,7 +57,11 @@
 <%- include('../partials/footer'); %>
 <script src="/node_modules/typed.js/dist/typed.umd.js"></script>
    <script>
-   
+if (location.protocol !== 'https:') {
+    var wsProtocol = "ws";
+}  else {
+  var wsProtocol = "wss";
+}
 $("#generateButton").click(function(){
   $('#mainTitle').text('');
   const typed = new Typed("#mainTitle", {
@@ -101,7 +105,7 @@ $("#generateButton").click(function(){
       timeout: 300000
   });
 });    
-    var conn = new ReconnectingWebSocket('ws://'+location.host+'/?uu=1');
+    var conn = new ReconnectingWebSocket(wsProtocol+'://'+location.host+'/?uu=1');
     conn.debug = true;
     conn.timeoutInterval = 5400;
     conn.onopen = function(e) {

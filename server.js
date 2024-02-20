@@ -130,6 +130,8 @@ app.get('/timelapse/generate', (req, res) => {
   } else {
     frigateOnline = 0;
   }  
+  console.log(req.protocol)
+  req.headers['x-forwarded-proto']
   res.render('pages/manualTimelapse', {
     frigateurl: jsonConfig.frigateURL,
     cameras: cameras,
