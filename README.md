@@ -158,6 +158,6 @@ And finally, if you wanted to return a json which you can use in some other webp
 
 Generating the timelapse takes some time, it's not an instant thing. Obviously the faster the host system is the quicker it will be.
 
-To get an example of how to get this working with Home Assistant, read HomeAssistant.md
+To get an example of how to get this working with Home Assistant, read [HomeAssistant.md](HomeAssistant.md)
 
 It's very much written for my needs and as such will have bugs (and very little error checking), suggestions/problems in "Issues" here on Github.

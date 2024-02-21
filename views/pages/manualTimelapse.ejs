@@ -84,7 +84,7 @@ $("#generateButton").click(function(){
       dataType:'json',
       success : function(data) {             
         typed.destroy(); 
-          console.log("Generated Timelapse");
+        $('#mainTitle').text("Voilà! Your Timelapse.");
       },
       error : function(response,error)
       {

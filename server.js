@@ -10,7 +10,6 @@ const path = require("path");
 const shell = require("electron").shell;
 const ipcRenderer = require("electron").ipcRenderer;
 const os = require("os");
-const ffbinaries = require("ffbinaries");
 const ffmpeg = require("fluent-ffmpeg");
 const videoshow = require("videoshow");
 const _ = require('underscore');
@@ -23,6 +22,8 @@ const PORT = config.listenPort;
 const HOST = '0.0.0.0';
 const imageDirPath = __dirname + "/files/" + config.imageSaveDir;
 const videoDirPath = __dirname + "/files/" + config.videoSaveDir;
+const selfHost = config.timeLapseURL;
+const selfPort = config.listenPort;
 const htmlPath = __dirname + '/public'
 const dateTimeFormatString = "yyyy-MM-dd-hh-mm-ss" 
 var jsonParser = bodyParser.json()
@@ -43,7 +44,7 @@ wsServer.on('connection', socket => {
         });        
       }
     }
-      console.log('received: %s', data);
+      //console.log('received: %s', data);
     });
   });
 const app = express();
@@ -130,7 +131,6 @@ app.get('/timelapse/generate', (req, res) => {
   } else {
     frigateOnline = 0;
   }  
-  console.log(req.protocol)
   req.headers['x-forwarded-proto']
   res.render('pages/manualTimelapse', {
     frigateurl: jsonConfig.frigateURL,
@@ -169,7 +169,6 @@ app.get('/v/thumb/:camera/:filename/:pointless', (req, res) => {
   var file = req.params.filename;
   var camera = req.params.camera;
   var fileWithPath = videoDirPath+camera+'/'+file
-  console.log(fileWithPath)
   if (!fs.existsSync(fileWithPath)) {
     res.sendFile(__dirname + '/public/images/not-found.jpg')
   } else {
@@ -307,8 +306,10 @@ app.get('/:camera/timelapse/:hass/:json', (req, res) => {
         })
         .takeScreenshots({ count: 1, timemarks: [ '00:00:07.000' ], size: '300x169', filename: 'tn_'+req.params['camera']+'_'+videoDate+'.mp4.png' }, dirPathVideoCamera);        
         if(fromHomeAssistant == 1 && jsonConfig.usingHomeAssistant == 1) {
-          jsonString = '{"video": ' + config.timeLapseURL + '/' + req.params['camera'] + '/' + req.params['camera']+'_'+videoDate + '.mp4"}'
-          needle.post(config.homeAssistantURL+'/api/webhook/'+jsonConfig.homeAssistantToken, jsonString, requestOptions)
+          jsonString = '{"video": "' + selfHost + ':'+selfPort+'/v/t/' + req.params['camera'] + '/' + req.params['camera']+'_'+videoDate + '.mp4"}'
+          needle.post(jsonConfig.hassURL+'/api/webhook/'+jsonConfig.hassWebhook, jsonString, requestOptions)
+          res.send("ok")
+          
         } else {
           const socketMessage = {action:"finishedTimelapse", filename:req.params['camera'] + '/' + req.params['camera']+'_'+videoDate + '.mp4',camera:req.params['camera']};
           if(jsonReply == 1) {
@@ -340,7 +341,7 @@ app.get('/setup', (req, res) => {
   }
 });
 
-app.post('/api/check/frigate', urlencodedParser, (req, res) => {
+app.post('/api/setup/frigate', urlencodedParser, (req, res) => {
   const data = req.body;
   var frigateURL = data.frigateURL;
   needle('get', frigateURL+'/api/config')
@@ -348,7 +349,6 @@ app.post('/api/check/frigate', urlencodedParser, (req, res) => {
     if(resp.statusCode == 200 || response.statusCode == 201 || response.statusCode == 202 || response.statusCode == 301 || response.statusCode == 302)
     var cameras = []
     _.each(resp.body.cameras, function (value, key) {
-      console.log(value.name)
       cameras.push({
         camera: value.name
       });
@@ -415,18 +415,27 @@ app.get('/settings', (req, res) => {
   });
 });
 
+app.get('/api/check/frigate', (req, res) => {
+  if(isFrigateOnline() == "online") {
+    frigateOnline = 1; 
+  } else {
+    frigateOnline =0;
+  }
+  res.send(JSON.stringify({'online':frigateOnline}))
+});
 
 const server = app.listen(PORT, HOST, () => {
   const jsonConfig = JSON.parse(fs.readFileSync('./data/config.json'));
   if (fs.existsSync(__dirname +'/.online')) {
     fs.unlinkSync(__dirname +'/.online');
   }
-  runSetupChecks()
+  runSetupChecks();
+  removeOldFiles();
   if(jsonConfig.needsSetup == 0) {
     isOnline(jsonConfig.frigateURL); 
   }
    
-  console.log(`Running on http://${HOST}:${PORT}`);
+  console.log(`Frigate Timelapser running on http://${HOST}:${PORT}`);
 });
 
 server.on('upgrade', (request, socket, head) => {
@@ -441,15 +450,11 @@ function runSetupChecks() {
   if (!fs.existsSync('./files/' + config.imageSaveDir)) {
     console.log("Image save directory doesn't exist, creating");
     fs.mkdirSync('./files/' + config.imageSaveDir);
-  } else {
-    console.log("Image save directory already exists");
   }
   
   if (!fs.existsSync('./files/' + config.videoSaveDir)) {
     console.log("Video save directory doesn't exist, creating");
     fs.mkdirSync('./files/' + config.videoSaveDir);
-  } else {
-    console.log("Video save directory already exists");
   }
   
   var arrayLength = cameras.length;
@@ -570,15 +575,16 @@ var getFormattedDate = function () {
 }
 
 async function isOnline (host) {
-  needle('get', host)
-  .then(function(resp) {
-    if(resp.statusCode == 200 || response.statusCode == 201 || response.statusCode == 202 || response.statusCode == 301 || response.statusCode == 302)
-    fs.closeSync(fs.openSync(__dirname +'/.online', 'w'));
-    console.log("Frigate is up")
-  })
-  .catch(function(err) {
-    console.log(err)
-    console.log("Frigate is down")
+  needle.get(host, function(error, response) {
+    if (!error && response.statusCode == 200 || response.statusCode == 201 || response.statusCode == 202 || response.statusCode == 301 || response.statusCode == 302) {
+      fs.closeSync(fs.openSync(__dirname +'/.online', 'w'));
+      console.log("Frigate is up")
+      return "online";
+    } else {
+      console.log(error)
+      console.log("Frigate is down")
+      return "offline";
+    }
   });
 }
 
@@ -612,17 +618,16 @@ async function removeOldFiles() {
   for (var i = 0; i < arrayLength; i++) {
     numberOfSecondsImages = jsonConfig.keepImagesDays * 86400;
     numberOfSecondsVideos = jsonConfig.keepVideosDays * 86400;
-    console.log(numberOfSecondsImages);
     var imageResult = findRemoveSync('./files/'+config.imageSaveDir+cameras[i], {
       age: { seconds: numberOfSecondsImages },
       extensions: '.jpg'
     })        
     var numberOfDeletedImageFiles = imageResult.length;
-    var videoResult = findRemoveSync('./files/'+config.imageSaveDir+cameras[i], {
+    var videoResult = findRemoveSync('./files/'+config.videoSaveDir+cameras[i], {
       age: { seconds: numberOfSecondsVideos },
       extensions: ['.png', '.mp4']
     })        
     var numberOfDeletedVideoFiles = videoResult.length;
-    console.log("Purging old videos and images")    
+    console.log("Purging old videos and images from "+cameras[i]+" folder.")    
   }
 }

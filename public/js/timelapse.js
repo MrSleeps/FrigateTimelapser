@@ -245,3 +245,25 @@ function Notification(opts) {
     const error = ({ title, message }) => showPopup({ type: 'error', title, message });
     return { dialog, info, success, warning, error, setPosition };
   }
+
+  function isFrigateOnline() {
+    var frigateSensor = $('#frigateSensor');
+    $.ajax({
+        url: '/api/check/frigate',
+        dataType: 'json',
+        success: function(data) {
+          if(data.online == 1) {
+            frigateSensor.addClass("green-text").removeClass("red-text-animate")
+            frigateSensor.html("<b>Online</b>")
+          } else {
+            frigateSensor.addClass("red-text-animate").removeClass("green-text")
+            frigateSensor.html("<b>Offline</b>")
+          }
+        },
+        complete: function() {
+            window.setTimeout(isFrigateOnline, 30000);
+        }
+    });
+}
+
+window.setTimeout(isFrigateOnline, 30000);

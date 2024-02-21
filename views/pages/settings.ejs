@@ -152,7 +152,6 @@
             return false;
         }
         if($('#homeAssistantChoice').prop('checked') == true) {
-            console.log(hassURL)
             if(isValidUrl(hassURL) == false) {
                 $('#hassAddressInput').addClass('is-invalid');
                 $("#hassAddressInput").focus();
@@ -165,7 +164,6 @@
                 return false;
             }            
             if(hassWebhookInput.length == 0) {
-                console.log("zero length")
                 $('#hassWebhookFeedback').text("You need to provide your Webhook ID.")
                 $('#hassWebhookInput').addClass('is-invalid');
                 $("#hassWebhookInput").focus();

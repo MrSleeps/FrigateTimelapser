@@ -38,9 +38,13 @@ footer {
 }
 
 .red-text-animate {
-    color: #750707;
+    color: #c50707;
     animation: animate  
         1.5s linear infinite;
+}
+
+.max-220 {
+  max-height: 220px;
 }
 
 @keyframes animate { 
