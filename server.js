@@ -11,6 +11,8 @@ const shell = require("electron").shell;
 const ipcRenderer = require("electron").ipcRenderer;
 const os = require("os");
 const ffmpeg = require("fluent-ffmpeg");
+ffmpeg.setFfmpegPath('/usr/bin/ffmpeg');
+ffmpeg.setFfprobePath('/usr/bin/ffprobe');
 const videoshow = require("videoshow");
 const _ = require('underscore');
 const dateFormat = require('date-format');
@@ -247,6 +249,7 @@ app.get('/:camera/timelapse/:hass/:json', (req, res) => {
   const files = getFiles(imageDirPath, req.params['camera']);
   const sortedFiles = orderByCTime(dirPathCamera, files);
   const filteredFiles = filterFiles(sortedFiles);
+  
   if (filteredFiles.length > 0) {
     var videoOptions = {
       fps: 25,
@@ -259,6 +262,28 @@ app.get('/:camera/timelapse/:hass/:json', (req, res) => {
       format: 'mp4',
       pixelFormat: 'yuv420p'
     }
+    
+    // If it's from Home Assistant, fork it off and return "ok" immediately
+    if (fromHomeAssistant == 1 && jsonConfig.usingHomeAssistant == 1) {
+      console.log("Home Assistant request - processing async");
+      
+      // Return "ok" immediately to stop Home Assistant from timing out
+      res.send("ok");
+      
+      // Process in background
+      setTimeout(() => {
+        processHomeAssistantTimelapseAsync(
+          req.params['camera'],
+          dirPathCamera,
+          dirPathVideoCamera,
+          filteredFiles,
+          videoOptions
+        );
+      }, 100);
+      
+      return; // Exit early
+    }
+    
     if(fromHomeAssistant == 0 && jsonReply == 0) {
       const cameras = jsonConfig.frigateCameras.split(",");
       if(jsonConfig.needsSetup == 1) {
@@ -278,8 +303,10 @@ app.get('/:camera/timelapse/:hass/:json', (req, res) => {
         frigateOnline: frigateOnline
       });       
     } 
+    
     var videoDate = getFormattedDate();
     var videoFilename = dirPathVideoCamera + req.params['camera']+'_'+videoDate + ".mp4";
+    
     videoshow(filteredFiles, videoOptions)
       .save(videoFilename)
       .on('start', function (command) {
@@ -304,22 +331,20 @@ app.get('/:camera/timelapse/:hass/:json', (req, res) => {
         .on('error', function(err) {
           console.log('an error happened: ' + err.message);
         })
-        .takeScreenshots({ count: 1, timemarks: [ '00:00:07.000' ], size: '300x169', filename: 'tn_'+req.params['camera']+'_'+videoDate+'.mp4.png' }, dirPathVideoCamera);        
-        if(fromHomeAssistant == 1 && jsonConfig.usingHomeAssistant == 1) {
-          jsonString = '{"video": "' + selfHost + ':'+selfPort+'/v/t/' + req.params['camera'] + '/' + req.params['camera']+'_'+videoDate + '.mp4"}'
-          needle.post(jsonConfig.hassURL+'/api/webhook/'+jsonConfig.hassWebhook, jsonString, requestOptions)
-          res.send("ok")
-          
-        } else {
-          const socketMessage = {action:"finishedTimelapse", filename:req.params['camera'] + '/' + req.params['camera']+'_'+videoDate + '.mp4',camera:req.params['camera']};
-          if(jsonReply == 1) {
-            res.json(socketMessage)
-          }
-          const client = new ws('ws://127.0.0.1:'+config.listenPort);
-          client.on('open', () => {
-            client.send(JSON.stringify(socketMessage));
-          });
+        .takeScreenshots({ count: 1, timemarks: [ '00:00:07.000' ], size: '300x169', filename: 'tn_'+req.params['camera']+'_'+videoDate+'.mp4.png' }, dirPathVideoCamera);
+        
+        // Send WebSocket notification for browser requests
+        const socketMessage = {action:"finishedTimelapse", filename:req.params['camera'] + '/' + req.params['camera']+'_'+videoDate + '.mp4',camera:req.params['camera']};
+        
+        if(jsonReply == 1) {
+          res.json(socketMessage)
         }
+        
+        const client = new ws('ws://127.0.0.1:'+config.listenPort);
+        client.on('open', () => {
+          client.send(JSON.stringify(socketMessage));
+        });
+        
         console.log('Video created in:', output)
       })
   } else {
@@ -328,6 +353,75 @@ app.get('/:camera/timelapse/:hass/:json', (req, res) => {
     res.json(errorMessage)
   }
 });
+
+function processHomeAssistantTimelapseAsync(camera, dirPathCamera, dirPathVideoCamera, filteredFiles, videoOptions) {
+  console.log("Processing Home Assistant timelapse async for", camera);
+  
+  var videoDate = getFormattedDate();
+  var videoFilename = dirPathVideoCamera + camera + '_' + videoDate + ".mp4";
+  
+  videoshow(filteredFiles, videoOptions)
+    .save(videoFilename)
+    .on('start', function (command) {
+      console.log("Starting async Timelapse generation for HA")
+    })
+    .on('error', function (err, stdout, stderr) {
+      console.error('HA Async Error:', err)
+      console.error('HA Async ffmpeg stderr:', stderr)
+    }) 
+    .on('end', function (output) {
+      var requestOptions = {
+        json: true,
+        timeout: 10 * 60 * 1000 //10 minutes
+      }
+      
+      // Generate thumbnail
+      var proc = ffmpeg(videoFilename)
+      .on('filenames', function(filenames) {
+        console.log('HA screenshots are ' + filenames.join(', '));   
+      })
+      .on('end', function() {
+        console.log('HA screenshots were saved');
+      })
+      .on('error', function(err) {
+        console.log('HA an error happened: ' + err.message);
+      })
+      .takeScreenshots({ count: 1, timemarks: [ '00:00:07.000' ], size: '300x169', filename: 'tn_'+camera+'_'+videoDate+'.mp4.png' }, dirPathVideoCamera);
+      
+      // Send webhook to Home Assistant
+      const jsonConfig = JSON.parse(fs.readFileSync('./data/config.json'));
+      const jsonString = '{"video": "' + selfHost + ':'+selfPort+'/v/t/' + camera + '/' + camera+'_'+videoDate + '.mp4"}';
+      
+      needle.post(
+        jsonConfig.hassURL+'/api/webhook/'+jsonConfig.hassWebhook, 
+        jsonString, 
+        requestOptions,
+        function(err, resp) {
+          if (err) {
+            console.error('HA Webhook error:', err);
+          } else {
+            console.log('HA Webhook sent successfully');
+          }
+        }
+      );
+      
+      // Also send WebSocket notification (optional)
+      const socketMessage = {
+        action: "finishedTimelapse", 
+        filename: camera + '/' + camera+'_'+videoDate + '.mp4',
+        camera: camera,
+        source: "homeassistant"
+      };
+      
+      wsServer.clients.forEach(function each(client) {
+        if (client.readyState === ws.OPEN) {
+          client.send(JSON.stringify(socketMessage));
+        }
+      });
+      
+      console.log('HA Video created in:', output)
+    });
+}
 
 app.get('/setup', (req, res) => {
   const jsonConfig = JSON.parse(fs.readFileSync('./data/config.json'));
@@ -574,18 +668,30 @@ var getFormattedDate = function () {
   return dateFormat.asString(dateTimeFormatString, new Date());
 }
 
-async function isOnline (host) {
-  needle.get(host, function(error, response) {
-    if (!error && response.statusCode == 200 || response.statusCode == 201 || response.statusCode == 202 || response.statusCode == 301 || response.statusCode == 302) {
-      fs.closeSync(fs.openSync(__dirname +'/.online', 'w'));
-      console.log("Frigate is up")
+async function isOnline(host) {
+  try {
+    const response = await needle('get', host);
+    const statusCode = response.statusCode;
+    const isSuccess = [200, 201, 202, 301, 302].includes(statusCode);
+    
+    if (isSuccess) {
+      console.log("Frigate is up, status:", statusCode);
+      try {
+        fs.closeSync(fs.openSync(__dirname + '/.online', 'w'));
+      } catch (e) {
+        // Ignore file errors
+      }
       return "online";
     } else {
-      console.log(error)
-      console.log("Frigate is down")
+      console.log("Frigate returned non-success status:", statusCode);
+      console.log("Frigate is down");
       return "offline";
     }
-  });
+  } catch (error) {
+    console.log("Error checking Frigate:", error.message || error);
+    console.log("Frigate is down");
+    return "offline";
+  }
 }
 
 var isFrigateOnline = function () {
