@@ -29,5 +29,4 @@ RUN apk add --no-cache curl
 HEALTHCHECK --start-period=120s --start-interval=5s --interval=15s --timeout=5s --retries=3 \
     CMD curl --fail --silent --show-error http://127.0.0.1:8500/healthcheck || exit 1
 EXPOSE 8500
-CMD
 CMD [ "node", "server.js" ]
